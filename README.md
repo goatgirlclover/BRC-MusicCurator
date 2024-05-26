@@ -1,4 +1,6 @@
-# BRC-MusicCurator
+<p align="center"> <img src="icon.png" alt="MusicCurator icon" width="200"/> </p> 
+<h1> <p align="center" > MusicCurator </p> </h1> 
+
  A Bomb Rush Cyberfunk plugin that adds several new features to enhance the in-game listening experience.\
  For more information, [check the Thunderstore page.](https://thunderstore.io/c/bomb-rush-cyberfunk/p/goatgirl/MusicCurator)
 ## Features
