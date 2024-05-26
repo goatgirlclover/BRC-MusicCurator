@@ -2,7 +2,7 @@
 <h1> <p align="center" > MusicCurator </p> </h1> 
 
  A Bomb Rush Cyberfunk plugin that adds several new features to enhance the in-game listening experience.\
- For more information, [check the Thunderstore page.](https://thunderstore.io/c/bomb-rush-cyberfunk/p/goatgirl/MusicCurator)
+ For more information or release downloads, [check the Thunderstore page.](https://thunderstore.io/c/bomb-rush-cyberfunk/p/goatgirl/MusicCurator)
 ## Features
 - **Instant shuffle**: If you're getting tired of the "Locking Up the Funk" mixtape, this config option chooses a random song to play when loading a save. Also switches your music player app to shuffle mode automatically for maximum convienence. 
 - **Skip tracks**: Hit R3 (Semicolon on keyboard) to skip the currently playing song at any time. No more scrolling through the music app in the middle of a combo!
