@@ -17,7 +17,7 @@
 ## Installation
 - If installing using r2modman, click "Install with Mod Manager"
 - If installing manually, extract the .zip and drop the mod files into your \BepInEx\plugins\ folder
-	- Make sure that the "MC-LoopSingle.png" and "MC-PlaylistIcon.png" files (found in \include\) are in the same location as the MusicCurator.dll file!
+	- Make sure that the "MC-LoopSingle.png" and "MC-PlaylistIcon.png" files (found in the \include\ folder) are in the same location as the MusicCurator.dll file!
 ## Building from Source
 This plugin requires the following .dlls to be placed in the \lib\ folder to be built:
 - A [publicized](https://github.com/CabbageCrow/AssemblyPublicizer) version of the game's code, from BRC's Data folder (Assembly-CSharp.dll)
