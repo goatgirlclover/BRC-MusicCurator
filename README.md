@@ -20,7 +20,7 @@
 	- Make sure that the "MC-LoopSingle.png" and "MC-PlaylistIcon.png" files are in the same location as the MusicCurator.dll file!
 ## Building from Source
 This plugin requires the following .dlls to be placed in the \lib\ folder to be built:
-- A [publicized](https://github.com/BepInEx/BepInEx.AssemblyPublicizer) version of the game's code, from BRC's Data folder (Assembly-CSharp.dll)
+- A [publicized](https://github.com/CabbageCrow/AssemblyPublicizer) version of the game's code, from BRC's Data folder (Assembly-CSharp.dll)
 - [CommonAPI.dll by Lazy Duchess](https://github.com/LazyDuchess/BRC-CommonAPI/releases)
 - 0Harmony.dll and BepInEx.dll from \BepInEx\core
 - [BombRushRadio.dll](https://github.com/Kade-github/BombRushRadio/releases) for compatibility purposes
