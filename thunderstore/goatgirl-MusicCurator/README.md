@@ -7,6 +7,7 @@ MusicCurator adds several new features to enhance your in-game listening experie
 - **Instant shuffle**: If you're getting tired of the "Locking Up the Funk" mixtape, this config option chooses a random song to play when loading a save. Also switches your music player app to shuffle mode automatically for maximum convienence. 
 - **Skip tracks**: Hit R3 (Semicolon on keyboard) to skip the currently playing song at any time. No more scrolling through the music app in the middle of a combo!
 - **Track blocklist**: Sick of *that one song* killing your groove? Select it in the music app and press the skip button, and it'll never play again! (...except when you play it manually or in a playlist)
+    - By default, all looped mixtapes are blocklisted to prevent them from playing automatically.
 - **Track queueing**: Press L3 (Quote) while hovering over a track in the music app to queue it up. Once the current track ends, the earliest queued track will play next, regardless of shuffle/looping settings.
 - **Playlists**: The Playlists app in your phone allows you to create and edit playlists, as well as manage your blocklist and queue. Keep your favorite tracks on loop, or create playlists for different stages and vibes. Perfect for organizing your custom tracks!
 - **Single loop**: A new looping option within the music app to keep one track constantly playing. Note that skipping a track in single loop mode will simply restart it instead. 

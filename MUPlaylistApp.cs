@@ -76,7 +76,10 @@ namespace MusicCurator
             ScrollView.AddButton(nextButton);
 
             foreach (int playlistName in Enumerable.Range(0, MusicCuratorPlugin.playlists.Count).ToArray()) {
-                nextButton = PhoneUIUtility.CreateSimpleButton(MusicCuratorPlugin.GetPlaylistName(playlistName) + " (" + MusicCuratorPlugin.playlists[playlistName].Count + ")");
+                string begin = MusicCuratorPlugin.currentPlaylistIndex == playlistName ? "> " : "";
+                string end = MusicCuratorPlugin.PlaylistAnyInvalidTracks(playlistName) ? " (!)" : ""; 
+                nextButton = PhoneUIUtility.CreateSimpleButton(begin + MusicCuratorPlugin.GetPlaylistName(playlistName) + " (" + MusicCuratorPlugin.playlists[playlistName].Count + ")" + end);
+
                 nextButton.OnConfirm += () => {
                     MusicCuratorPlugin.selectedPlaylist = playlistName;
                     MyPhone.OpenApp(typeof(AppSelectedPlaylist));
@@ -143,7 +146,7 @@ namespace MusicCurator
 
             nextButton = PhoneUIUtility.CreateSimpleButton("Reset blocklist");
             nextButton.OnConfirm += () => {
-                PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions; 
+                MusicCuratorPlugin.excludedTracks.Clear(); 
                 MusicCuratorPlugin.SaveExclusions();
             };
             ScrollView.AddButton(nextButton);
@@ -250,10 +253,11 @@ namespace MusicCurator
                 nextButton.LabelUnselectedColor = Color.red;
             } else {
                 nextButton.OnConfirm += () => {
-                    MusicCuratorPlugin.LoadPlaylistIntoQueue(MusicCuratorPlugin.selectedPlaylist, true);
-                    MusicCuratorPlugin.queuedTracks.Clear();
                     MusicCuratorPlugin.SetAppShuffle(true);
                     MusicCuratorPlugin.shufflingPlaylist = true;
+                    MusicCuratorPlugin.queuedTracks.Clear();
+                    MusicCuratorPlugin.LoadPlaylistIntoQueue(MusicCuratorPlugin.selectedPlaylist, true);
+                    
                     MusicCuratorPlugin.SkipCurrentTrack();
                     MyPhone.OpenApp(typeof(AppPlaylists));
                 };
@@ -268,10 +272,11 @@ namespace MusicCurator
                 nextButton.LabelUnselectedColor = Color.red;
             } else {
             nextButton.OnConfirm += () => {
-                MusicCuratorPlugin.LoadPlaylistIntoQueue(MusicCuratorPlugin.selectedPlaylist, false);
-                MusicCuratorPlugin.queuedTracks.Clear();
                 MusicCuratorPlugin.SetAppShuffle(false);
                 MusicCuratorPlugin.shufflingPlaylist = false;
+                MusicCuratorPlugin.queuedTracks.Clear();
+                MusicCuratorPlugin.LoadPlaylistIntoQueue(MusicCuratorPlugin.selectedPlaylist, false);
+                
                 MusicCuratorPlugin.SkipCurrentTrack();
                 MyPhone.OpenApp(typeof(AppPlaylists));
             };
@@ -400,7 +405,7 @@ namespace MusicCurator
                 string IDDisplay = mpTrack.Artist + " - " + mpTrack.Title;
                 nextButton = PhoneUIUtility.CreateSimpleButton(IDDisplay);
 
-                if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay), false))) {
+                if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay)))) {
                     nextButton.Label.faceColor = Color.red;
                     nextButton.LabelSelectedColor = Color.red;
                     nextButton.LabelUnselectedColor = Color.red;
@@ -408,7 +413,7 @@ namespace MusicCurator
                 
                 nextButton.OnConfirm += () => {
                     //if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay), false))) { return; }
-                    MusicCuratorPlugin.appSelectedTrack = MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay), false);
+                    MusicCuratorPlugin.appSelectedTrack = MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay));
                     MyPhone.OpenApp(typeof(AppRemoveTrackFromPlaylist));
                 };
                 ScrollView.AddButton(nextButton);
@@ -469,10 +474,18 @@ namespace MusicCurator
             nextButton.OnConfirm += () => {
                 MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Remove(MusicCuratorPlugin.appSelectedTrack);
                 MusicCuratorPlugin.appSelectedTrack = null;
-                MusicCuratorPlugin.SavePlaylists(); // add this method
-                MusicCuratorPlugin.ReorderPlaylistInQueue(MusicCuratorPlugin.musicPlayer.shuffle);
-                MyPhone.OpenApp(typeof(AppEditPlaylist));
-                MyPhone.m_PreviousApps.Pop();
+
+                if (!MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Any()) {
+                    MusicCuratorPlugin.selectedPlaylist = -1;
+                    MyPhone.OpenApp(typeof(AppPlaylists));
+                } else {
+                    MusicCuratorPlugin.ReorderPlaylistInQueue(MusicCuratorPlugin.musicPlayer.shuffle);
+                    MyPhone.OpenApp(typeof(AppEditPlaylist));
+                    MyPhone.m_PreviousApps.Pop();
+                    MyPhone.m_PreviousApps.Pop();
+                }
+
+                MusicCuratorPlugin.SavePlaylists(); 
             };
             ScrollView.AddButton(nextButton);
 
@@ -480,6 +493,7 @@ namespace MusicCurator
             nextButton.OnConfirm += () => {
                 MusicCuratorPlugin.appSelectedTrack = null;
                 MyPhone.OpenApp(typeof(AppEditPlaylist));
+                MyPhone.m_PreviousApps.Pop();
                 MyPhone.m_PreviousApps.Pop();
             };
             ScrollView.AddButton(nextButton);
@@ -493,7 +507,7 @@ namespace MusicCurator
             ScrollView.RemoveAllButtons();
             Destroy(overlayInstance.gameObject);
             base.OnAppDisable();
-            MyPhone.m_PreviousApps.Pop();
+            //MyPhone.m_PreviousApps.Pop();
         }
 
         public override void OnAppInit()
@@ -528,6 +542,8 @@ namespace MusicCurator
         {
             // Create and setup buttons
             foreach (MusicTrack mpTrack in MusicCuratorPlugin.GetAllMusic()) {
+                if (MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(mpTrack)) { continue; }
+                
                 MusicCuratorPlugin.Log.LogInfo("Tracklist App: Adding " + mpTrack.Artist + " - " + mpTrack.Title);
                 var nextButton = PhoneUIUtility.CreateSimpleButton(mpTrack.Artist + " - " + mpTrack.Title);
                 nextButton.OnConfirm += () => {
@@ -564,7 +580,7 @@ namespace MusicCurator
             //    MusicCuratorPlugin.selectedPlaylist = MusicCuratorPlugin.CreatePlaylist();
             //}
             foreach (string trackToAddToPlaylist in selectedTracksToAddToPlaylist) {
-                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Add(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(trackToAddToPlaylist), false));
+                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Add(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(trackToAddToPlaylist)));
             }
             
             selectedTracksToAddToPlaylist.Clear();
@@ -608,7 +624,7 @@ namespace MusicCurator
             // Create and setup buttons
             var nextButton = PhoneUIUtility.CreateSimpleButton("Cancel");
             nextButton.OnConfirm += () => {
-                MyPhone.OpenApp(typeof(AppEditPlaylist));
+                MyPhone.OpenApp(typeof(AppSelectedPlaylist));
                 MyPhone.m_PreviousApps.Pop();
                 MyPhone.m_PreviousApps.Pop();
             };
@@ -673,7 +689,9 @@ namespace MusicCurator
 
             var nextButton = PhoneUIUtility.CreateSimpleButton("Cancel");
             nextButton.OnConfirm += () => {
-                MyPhone.OpenApp(typeof(AppPlaylists));
+                MyPhone.OpenApp(typeof(AppManageQueueAndExclusions));
+                MyPhone.m_PreviousApps.Pop();
+                MyPhone.m_PreviousApps.Pop();
             };
             ScrollView.AddButton(nextButton);
 
@@ -737,7 +755,7 @@ namespace MusicCurator
                 string IDDisplay = mpTrack.Artist + " - " + mpTrack.Title;
                 var nextButton = PhoneUIUtility.CreateSimpleButton(IDDisplay);
 
-                if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay), false))) {
+                if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay)))) {
                     nextButton.Label.faceColor = Color.red;
                     nextButton.LabelSelectedColor = Color.red;
                     nextButton.LabelUnselectedColor = Color.red;
@@ -754,13 +772,16 @@ namespace MusicCurator
                         AppReorderPlaylist.selectedButton.LabelSelectedColor = AppPlaylistTracklist.LabelSelectedColorDefault;
                         AppReorderPlaylist.selectedButton.LabelUnselectedColor = AppPlaylistTracklist.LabelUnselectedColorDefault;
 
-                        ScrollView.Buttons.RemoveAt(selectIndex);
-                        ScrollView.InsertButton(selfIndex, AppReorderPlaylist.selectedButton);
-                        ScrollView.UpdateButtons();
-                        nextButton.PlayDeselectAnimation();
+                        if (selfIndex != selectIndex) {
+                            ScrollView.Buttons.RemoveAt(selectIndex);
+                            ScrollView.InsertButton(selfIndex, AppReorderPlaylist.selectedButton);
+                            ScrollView.UpdateButtons();
+                            nextButton.PlayDeselectAnimation();
 
-                        MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Insert(selfIndex, MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist][selectIndex]);
-                        MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].RemoveAt(selectIndex + 1);
+                            MusicTrack selectedTrack = MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist][selectIndex];
+                            MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].RemoveAt(selectIndex);
+                            MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Insert(selfIndex, selectedTrack);
+                        }
                         //AppReorderPlaylist.selectedButton = null; 
                     } else { 
                         AppReorderPlaylist.draggingTrack = true; 
@@ -783,6 +804,7 @@ namespace MusicCurator
         {
             ScrollView.RemoveAllButtons();
             Destroy(overlayInstance.gameObject);
+            AppReorderPlaylist.draggingTrack = false; 
 
             if (!MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Any()) {
                 MusicCuratorPlugin.selectedPlaylist = -1;

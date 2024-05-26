@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.0.0")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.1.0")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -40,12 +40,12 @@ namespace MusicCurator
         public static List<MusicTrack> playlistTracks = new List<MusicTrack>();
         
         public static int currentPlaylistIndex = -1; 
-        public static bool shufflingPlaylist = false;
+        public static bool shufflingPlaylist = false; // idk if this is still useful
         public static MusicTrack playlistStartingTrack; // first played track in playlist
 
         public static bool skipping = false;
         //public static bool disableSkipping = false;
-        public static bool ContinuingStageTrack = false; // is this used for anything? 
+        public static bool ContinuingStageTrack = false; // if true, don't reset queue on next track lpay
         public static bool hasInstantShuffledAlready = false; // shuffle on game startup
 
         // for apps
@@ -62,7 +62,7 @@ namespace MusicCurator
         public static bool hasShuffleify = false;
         public static bool hasBRR = false;
 
-        public static MusicTrack missingStageTrack = null;
+        public static MusicTrack missingStageTrack = null; // for AllMixtapes
 
         public static int pausePlaybackSamples = 0;
         public static int pausedTrack; 
@@ -166,8 +166,8 @@ namespace MusicCurator
                 if (pressedAnyButtonIn(MCSettings.keybindsSkip)) {
                     if (!excludedTracks.Contains(selectedTrack)) { 
                         excludedTracks.Add(selectedTrack);
-                        if (ListAInB(GetAllMusic(), excludedTracks)) { excludedTracks.Clear(); } 
-                        else if (mptb.IsMyTrackPlaying()) { SkipCurrentTrack(); }
+                        if (mptb.IsMyTrackPlaying()) { SkipCurrentTrack(); }
+                        CheckIfAllExcluded();
                     } else { 
                         excludedTracks.Remove(selectedTrack); 
                     }
@@ -198,26 +198,27 @@ namespace MusicCurator
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {
             MusicTrack assignedTrack = button.AssignedContent as MusicTrack;
 
-            bool currentPlaylistExists = false;
-            if (currentPlaylistIndex != -1) { 
-                if (MusicCuratorPlugin.playlists[currentPlaylistIndex].Any()) {
-                    currentPlaylistExists = true; 
-                }
-            }
+            //bool currentPlaylistExists = false;
+            //if (currentPlaylistIndex != -1) { 
+            //    if (MusicCuratorPlugin.playlists[currentPlaylistIndex].Any()) {
+            //        currentPlaylistExists = true; 
+            //    }
+            //}
 
             TextMeshProUGUI queuePosLabel = button.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
             if (queuePosLabel != null && queuePosLabel != button.m_TitleLabel) {
                 if (queuePosLabel.text == "") { // initial setup - can't add an outline on label creation or game hard crashes
-                    queuePosLabel.outlineWidth = 0.3f;
+                    queuePosLabel.outlineWidth = 0.4f;
                     queuePosLabel.outlineColor = button.m_ArtistColorNormal;
+                    queuePosLabel.fontSharedMaterial.SetFloat(ShaderUtilities.ID_FaceDilate,0.4f);
                 }
-                if (MusicCuratorPlugin.playlistTracks.Contains(assignedTrack)) {
-                    // queued tracks take priority over playlist tracks
+                if (MusicCuratorPlugin.playlistTracks.Contains(assignedTrack) && !button.IsMyTrackPlaying()) {
+                    // queued tracks take priority over playlist tracks, so add the queued tracks count first
                     queuePosLabel.text = (playlistTracks.IndexOf(assignedTrack) + 1 + queuedTracks.Count).ToString();
                 } else {
                     queuePosLabel.text = (queuedTracks.IndexOf(assignedTrack) + 1).ToString();
                     // if playing a playlist, add an asterisk to queued tracks to show they aren't part of the playlist
-                    if (playlistTracks.Any() && queuePosLabel.text != "0") { 
+                    if (playlistTracks.Any() && currentPlaylistIndex >= 0 && queuePosLabel.text != "0") { 
                         queuePosLabel.text = queuePosLabel.text + "*"; 
                     }
                 }
@@ -227,18 +228,18 @@ namespace MusicCurator
             
             if (assignedTrack.Title != button.m_TitleLabel.text || button.IsHidden) { return; } 
 
-            bool inPlaylist = currentPlaylistExists ? playlists[currentPlaylistIndex].Contains(assignedTrack) : false;
+            //bool inPlaylist = currentPlaylistExists ? playlists[currentPlaylistIndex].Contains(assignedTrack) : false;
             // TODO: finalize colors (can we make them nicer?)
             // it'd also be nice to have actual icons instead of color coding everything
-            if (inPlaylist) {
-                    button.m_TitleLabel.color = Color.cyan;
-                    button.m_ArtistLabel.color = Color.cyan;
-            } else if (excludedTracks.Contains(assignedTrack)) {
+        //    if (inPlaylist) {
+        //            button.m_TitleLabel.color = Color.cyan;
+        //            button.m_ArtistLabel.color = Color.cyan;
+            if (excludedTracks.Contains(assignedTrack)) {
                     button.m_TitleLabel.color = Color.red;
                     button.m_ArtistLabel.color = Color.red;
-            } else if (queuedTracks.Contains(assignedTrack)) {
-                    button.m_TitleLabel.color = Color.magenta;
-                    button.m_ArtistLabel.color = Color.magenta;
+        //    } else if (queuedTracks.Contains(assignedTrack)) {
+        //            button.m_TitleLabel.color = Color.magenta;
+        //            button.m_ArtistLabel.color = Color.magenta;
             } else if (button.IsSelected) {
                     button.m_TitleLabel.color = button.m_TitleColorSelected;
                     button.m_ArtistLabel.color = button.m_ArtistColorSelected;
@@ -250,8 +251,8 @@ namespace MusicCurator
 
         public static void PlayTrack(MusicTrack targetTrack, int playbackSamples = 0) {
             int indexOfTarget = musicPlayer.musicTrackQueue.currentMusicTracks.IndexOf(targetTrack);
-            if (indexOfTarget == -1) {
-                Log.LogError("(MusicCuratorPlugin.PlayTrack) Target track invalid!");
+            if (indexOfTarget == -1 || indexOfTarget >= GetAllMusic().Count) {
+                Log.LogError("(MusicCuratorPlugin.PlayTrack) Target track outside range!");
                 //SkipCurrentTrack();
                 return;
             }
@@ -289,11 +290,11 @@ namespace MusicCurator
         }
 
         public static void ReorderPlaylistInQueue(bool randomize, bool seekToCurrentTrack = true) {
-            if (currentPlaylistIndex == -1 || currentPlaylistIndex > playlists.Count) {
+            if (currentPlaylistIndex == -1 || currentPlaylistIndex >= playlists.Count) {
                 return;
             }
             
-            MusicTrack currentTrack = (Core.Instance.AudioManager.MusicPlayer as MusicPlayer).musicTrackQueue.CurrentMusicTrack;
+            MusicTrack currentTrack = musicPlayer.musicTrackQueue.CurrentMusicTrack;
             List<MusicTrack> reorderedPlaylistTracks = new List<MusicTrack>();
             foreach (MusicTrack playlistTrack in playlists[currentPlaylistIndex].ToList()) {
                 if (!IsInvalidTrack(playlistTrack)) { //if (playlistTracks.Contains(playlistTrack)) {
@@ -317,20 +318,20 @@ namespace MusicCurator
         public static void ClearEmptyPlaylists(bool save = true)
         {
             foreach (int playlistIndex in Enumerable.Range(0, playlists.Count).ToArray()) {
-                if (!playlists[playlistIndex].Any()) {
-                    playlists.RemoveAt(playlistIndex);
-                    if (currentPlaylistIndex == playlistIndex) {
-                        playlistTracks.Clear();
-                        MusicCuratorPlugin.currentPlaylistIndex = -1;
+                if (playlists.ElementAtOrDefault(playlistIndex) != null) {
+                    if (!playlists[playlistIndex].Any()) {
+                        playlists.RemoveAt(playlistIndex);
+                        if (currentPlaylistIndex == playlistIndex) {
+                            playlistTracks.Clear();
+                            MusicCuratorPlugin.currentPlaylistIndex = -1;
+                        }
                     }
                 }
             }
             if (save) { SavePlaylists(true); }
         }
 
-        public static List<MusicTrack> GetAllMusic() { // is there a built in method for this?
-            return musicPlayer.musicTrackQueue.currentMusicTracks; // yes, yes there is!
-        }
+        public static List<MusicTrack> GetAllMusic() { return musicPlayer.musicTrackQueue.currentMusicTracks; }
 
         public static int CreatePlaylist() {
             playlists.Add(new List<MusicTrack>());
@@ -359,7 +360,7 @@ namespace MusicCurator
         }
 
         public static string GetPlaylistName(int playlistIndex) {
-            if (playlistIndex < 0 || playlistIndex > MCSettings.customPlaylistNames.Count - 1) {
+            if (playlistIndex < 0 || playlistIndex >= MCSettings.customPlaylistNames.Count) {
                 return "New Playlist " + (playlistIndex + 1).ToString();
             } else {
                 return MCSettings.customPlaylistNames[playlistIndex].Substring(0, Math.Min(MCSettings.customPlaylistNames[playlistIndex].Length, 32));
@@ -371,8 +372,8 @@ namespace MusicCurator
             // TODO: try and use this instead of the PlaylistAll methods
         }
 
-        public static bool IsInvalidTrack(MusicTrack willItBlend) {
-            return ((willItBlend.Title == string.Empty && willItBlend.Artist == string.Empty) || willItBlend.AudioClip == null);
+        public static bool IsInvalidTrack(MusicTrack checkTrack) {
+            return ((checkTrack.Title == string.Empty && checkTrack.Artist == string.Empty) || checkTrack.AudioClip == null);
         }
 
         public static bool pressedAnyButtonIn(List<KeyCode> keybinds) {
@@ -380,10 +381,10 @@ namespace MusicCurator
             return false;
         }
 
-        public static MusicTrack FindTrackBySongID(string songID, bool inclusive = true) {
+        public static MusicTrack FindTrackBySongID(string songID) {
             List<MusicTrack> foundTracksMatchID = new List<MusicTrack>();
             foreach (MusicTrack trackAtI in GetAllMusic()) {
-                if (MusicCuratorPlugin.TrackToSongID(trackAtI).Contains(ConformSongID(songID))) {
+                if (MusicCuratorPlugin.TrackToSongID(trackAtI).Equals(ConformSongID(songID))) {
                     foundTracksMatchID.Add(trackAtI);
                 }
             }
@@ -396,6 +397,50 @@ namespace MusicCurator
                 Log.LogError(String.Format("FindTrackBySongID: Multiple tracks are sharing songID {0} (same name and artist)! Please make sure your custom songs all have unique names/artists!!! First track found using songID will be returned - this may not be what you want!", songID));
             } 
             return foundTracksMatchID[0];
+        }
+
+        public static MusicTrack LooseFindTrackBySongID(string songID) { // intended for playlist repair
+            List<MusicTrack> foundTracksMatchID = new List<MusicTrack>();
+            string[] splitString = songID.Split(new [] { "-" }, StringSplitOptions.None);
+            //string songIDArtist = splitString[0].Trim();
+            string songIDTitle = splitString[1].Trim();
+
+            int closestCharDifference = 999;
+
+            foreach (MusicTrack trackAtI in GetAllMusic()) {
+                string trackAtID = MusicCuratorPlugin.TrackToSongID(trackAtI);
+                if (trackAtID.Contains(ConformSongID(songID))) {
+                    foundTracksMatchID.Add(trackAtI);
+                    int charDifference = Mathf.Abs(trackAtID.Length - songID.Length); 
+                    if (charDifference < closestCharDifference) { closestCharDifference = charDifference; }
+                }
+            }
+
+            foreach (MusicTrack foundTrack in foundTracksMatchID) {
+                if (Mathf.Abs(MusicCuratorPlugin.TrackToSongID(foundTrack).Length - songID.Length) == closestCharDifference) {
+                    return foundTrack;
+                }
+            }
+
+            // last resort - match by only title
+            foundTracksMatchID.Clear();
+            closestCharDifference = 999;
+            foreach (MusicTrack trackAtI in GetAllMusic()) {
+                string trackAtID = MusicCuratorPlugin.TrackToSongID(trackAtI);
+                if (trackAtID.Contains(songIDTitle)) { 
+                    foundTracksMatchID.Add(trackAtI);
+                    int charDifference = Mathf.Abs(trackAtI.Title.Length - songIDTitle.Length); 
+                    if (charDifference < closestCharDifference) { closestCharDifference = charDifference; }
+                }
+            }
+
+            foreach (MusicTrack foundTrack in foundTracksMatchID) {
+                if (Mathf.Abs(foundTrack.Title.Length - songIDTitle.Length) == closestCharDifference) {
+                    return foundTrack;
+                }
+            }
+
+            return CreateDummyTrack(songID);
         }
 
         public static MusicTrack CreateDummyTrack(string songID) {
@@ -426,7 +471,7 @@ namespace MusicCurator
                 playlists.Add(newPlaylist); // playlists[i] = newPlaylist;
             }
             LoadExclusions();
-            PlaylistSaveData.Instance.AutoSave = true;
+            PlaylistSaveData.Instance.AutoSave = true; // ensures PlaylistSaveData doesn't save over with empty playlists
         }
 
         public static void LoadExclusions() {
@@ -436,6 +481,7 @@ namespace MusicCurator
                     excludedTracks.Add(FindTrackBySongID(individualID));
                 }
             }
+            CheckIfAllExcluded();
         }
 
         public static void SavePlaylists(bool skipClear = false) {
@@ -457,6 +503,7 @@ namespace MusicCurator
         }
 
         public static void SaveExclusions() {
+            CheckIfAllExcluded();
             PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
 
             foreach (MusicTrack blocklisted in excludedTracks) {
@@ -513,6 +560,14 @@ namespace MusicCurator
             foreach (MusicTrack track in playlist) {
                 if (IsInvalidTrack(track)) { return true; }
             } return false;
+        }
+
+        public static void CheckIfAllExcluded() {
+            if (ListAInB(GetAllMusic(), excludedTracks)) { 
+                Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
+                excludedTracks.Clear(); 
+                PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
+            } 
         }
     }
 }

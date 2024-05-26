@@ -34,7 +34,7 @@ namespace MusicCurator {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(MusicPlayer.PlayNext))]
-        [HarmonyPriority(Priority.Low)] //[HarmonyAfter(["com.dragsun.Shufleify"])] 
+        //[HarmonyPriority(Priority.Low)] //[HarmonyAfter(["com.dragsun.Shufleify"])] 
         public static void PlayNextPostfix_OverrideNextTrack(MusicPlayer __instance) {
             // looping single track
             if (MusicCuratorPlugin.loopingSingleTrackIndex >= 0) {
@@ -62,7 +62,7 @@ namespace MusicCurator {
                 if (cantPlay) {
                     // try to find valid track in playlist
                     var i = 0;
-                    while (cantPlay && i < MusicCuratorPlugin.playlistTracks.Count - 1) {
+                    while (cantPlay && i <= MusicCuratorPlugin.playlistTracks.Count) {
                         i++;
                         MusicCuratorPlugin.playlistTracks.RemoveAt(0);
                         MusicCuratorPlugin.playlistTracks.Add(nextTrack);
@@ -71,7 +71,7 @@ namespace MusicCurator {
                     }
                     
                     // if failed to find valid track, stop playing the playlist and give up
-                    if (i >= MusicCuratorPlugin.playlistTracks.Count - 1) {
+                    if (i > MusicCuratorPlugin.playlistTracks.Count) {
                         MusicCuratorPlugin.playlistTracks.Clear();
                         MusicCuratorPlugin.currentPlaylistIndex = -1;
                         return;
@@ -95,9 +95,6 @@ namespace MusicCurator {
             //else if (MusicCuratorPlugin.excludedTracks.Contains(__instance.musicTrackQueue.CurrentMusicTrack) && !MusicCuratorPlugin.ContinuingStageTrack) {
             //    MusicCuratorPlugin.SkipCurrentTrack();
             //} 
-
-            //MusicCuratorPlugin.forceSkip = false;
-            //MusicCuratorPlugin.disableSkipping = false;
         }
 
         [HarmonyPostfix]
@@ -121,38 +118,12 @@ namespace MusicCurator {
                 MusicCuratorPlugin.ReorderPlaylistInQueue(value);
             }
         }
-
-        //[HarmonyPrefix]
-        //[HarmonyPatch(nameof(MusicPlayer.RefreshMusicQueueForStage))]
-        //public static bool RefreshPrefix_AllMixtapes(ChapterMusic chapterMusic, MusicTrack trackToPlay, Stage stage, MusicPlayer __instance) {
-            //MusicTrack hideoutTrack = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
-            //MusicTrack chapterTrack = Core.Instance.chapterMusic.GetChapterMusic(Story.GetCurrentObjectiveInfo().chapter);
-            //MusicCuratorPlugin.missingStageTrack = Reptile.Utility.GetCurrentStage() == Stage.hideout ? chapterTrack : hideoutTrack;
-            //if (PlaylistSaveData.excludedTracksCarryOver.Contains(MusicCuratorPlugin.TrackToSongID(MusicCuratorPlugin.missingStageTrack))) { MusicCuratorPlugin.excludedTracks.Add(MusicCuratorPlugin.missingStageTrack); }
-            
-            //if (MusicCuratorPlugin.hasBRR && MusicCuratorPlugin.missingStageTrack != null) { 
-            //    BRRHelper.AddMissingTrackToAudios(MusicCuratorPlugin.missingStageTrack); 
-            //}
-            //if (!BombRushRadio.BombRushRadio.Audios.Contains(MusicCuratorPlugin.missingStageTrack)) { BombRushRadio.BombRushRadio.Audios.Insert(0, MusicCuratorPlugin.missingStageTrack); }
-           
-         //   return true;
-
-            //if (!MCSettings.allMixtapes.Value || __instance.musicTrackQueue.currentMusicTracks.Contains(missingTrack)) { return; }
-                        //int amountOfUnlockedMusicTracks = 0;
-                        //AUnlockable[] unlockables = WorldHandler.instance.GetCurrentPlayer().phone.GetAppInstance<AppMusicPlayer>().Unlockables;
-                        //for (int i = 0; i < unlockables.Length; i++) {
-                        //    if (Core.Instance.Platform.User.GetUnlockableSaveDataFor(unlockables[i] as MusicTrack).IsUnlocked) { amountOfUnlockedMusicTracks += 1; } }
-
-                        //__instance.musicTrackQueue.currentMusicTracks.Insert(amountOfUnlockedMusicTracks + 1, missingTrack);
-                        //__instance.musicTrackQueue.currentMusicTracks.Add(missingTrack);
-            //__instance.musicTrackQueue.currentMusicTracks.Add(missingTrack);
-        //}
     }
 
     [HarmonyPatch(typeof(MusicTrackQueue))]
     internal class MusicQueuePatches {
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(MusicTrackQueue.ClearTracks))] // only used when refreshing
+        [HarmonyPatch(nameof(MusicTrackQueue.ClearTracks))] // find out missing stage mixtape, and add it if using brr
         public static void ClearTracksPostfix_AllMixtapes(MusicTrackQueue __instance) {
             if (!MCSettings.allMixtapes.Value) { return; }
             MusicTrack hideoutTrack = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
@@ -166,60 +137,35 @@ namespace MusicCurator {
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch(nameof(MusicTrackQueue.UpdateMusicQueueForStage))] // only used when refreshing
+        [HarmonyPatch(nameof(MusicTrackQueue.UpdateMusicQueueForStage))] // adding missing stage mixtake (non-brr version)
         public static bool RefreshingPrefix_AllMixtapes(MusicTrack trackToPlay, MusicTrackQueue __instance) {
             if (MusicCuratorPlugin.missingStageTrack == null || MusicCuratorPlugin.hasBRR || __instance.currentMusicTracks.Contains(MusicCuratorPlugin.missingStageTrack) || !MCSettings.allMixtapes.Value) { return true; }
 
             __instance.currentMusicTracks.Add(MusicCuratorPlugin.missingStageTrack);
             if (PlaylistSaveData.excludedTracksCarryOver.Contains(MusicCuratorPlugin.TrackToSongID(MusicCuratorPlugin.missingStageTrack))) { MusicCuratorPlugin.excludedTracks.Add(MusicCuratorPlugin.missingStageTrack); }
-            
-            //if (!BombRushRadio.BombRushRadio.Audios.Contains(MusicCuratorPlugin.missingStageTrack)) { BombRushRadio.BombRushRadio.Audios.Insert(0, MusicCuratorPlugin.missingStageTrack); }
-            //MusicTrack hideoutTrack = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
-            //MusicTrack chapterTrack = Core.Instance.chapterMusic.GetChapterMusic(Story.GetCurrentObjectiveInfo().chapter);
-            //MusicCuratorPlugin.missingStageTrack = Reptile.Utility.GetCurrentStage() == Stage.hideout ? chapterTrack : hideoutTrack;
-            
-            //int indexOfOtherUnlockedMixtapes = __instance.currentMusicTracks.Count - BombRushRadio.BombRushRadio.Audios.Count;
-            //if (indexOfOtherUnlockedMixtapes < 0) { indexOfOtherUnlockedMixtapes = 0; }
-            //if (!__instance.currentMusicTracks.Contains(MusicCuratorPlugin.missingStageTrack)) { __instance.currentMusicTracks.Insert(indexOfOtherUnlockedMixtapes, MusicCuratorPlugin.missingStageTrack); }
-            
-            //WorldHandler.instance.GetCurrentPlayer().phone.GetAppInstance<AppMusicPlayer>().RefreshList();
+
             return true;
         }
-
-        //    if (MusicCuratorPlugin.missingStageTrack == null || !MCSettings.allMixtapes.Value) { return; }
-        //    __instance.currentMusicTracks.Add(MusicCuratorPlugin.missingStageTrack);
-            
-            //foreach (string individualID in PlaylistSaveData.excludedTracksCarryOver) {
-            //    if (FindTrackBySongID(individualID).AudioClip == missingStageTrack.AudioClip) { MusicCuratorPlugin.excludedTracks.Add(missingStageTrack); }
-            //}
-
-            
-        //    }
-        //}
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(MusicTrackQueue.SelectNextTrack))]
         public static bool NTPrefix_SkipBlocklisted(MusicTrackQueue __instance) {
-            if (__instance.AmountOfTracks <= 0)
-            {
-                return false;
-            }
-            //if (MusicCuratorPlugin.excludedTracks.Count >= __instance.AmountOfTracks)
-            //{
-            //    MusicCuratorPlugin.SkipCurrentTrack();
-            //    return false;
-            //}
-
-            
-            
+            if (__instance.AmountOfTracks <= 0) { return false; }
             int nextInQueue = 0;
             int i = 0;
+            int runs = 0;
             bool solved = false;
-            while (i < __instance.AmountOfTracks)
+
+            while (runs < __instance.indexQueue.QueueCount)
             {
+                runs++;
                 i++;
+                if (i + __instance.indexQueue.indexQueue.IndexOf(__instance.currentTrackIndex) >= __instance.indexQueue.indexQueue.Count) {
+                    i = 0 - __instance.indexQueue.indexQueue.IndexOf(__instance.currentTrackIndex);
+                }
                 nextInQueue = __instance.indexQueue.GetNextInQueue(__instance.currentTrackIndex, i);
-                bool dontSkipPlaylistTrack = MusicCuratorPlugin.playlistTracks.Contains(__instance.GetMusicTrack(nextInQueue)) && MCSettings.playlistTracksNoExclude.Value; 
+                
+                bool dontSkipPlaylistTrack = MusicCuratorPlugin.currentPlaylistIndex != -1 && MusicCuratorPlugin.playlistTracks.Contains(__instance.GetMusicTrack(nextInQueue)) && MCSettings.playlistTracksNoExclude.Value; 
                 if (!MusicCuratorPlugin.excludedTracks.Contains(__instance.GetMusicTrack(nextInQueue)) && !dontSkipPlaylistTrack)
                 {
                     solved = true;
@@ -266,13 +212,6 @@ namespace MusicCurator {
         public static void OnMusicAppDisable_SaveExclusions() {
             MusicCuratorPlugin.SaveExclusions();
         }
-
-        //[HarmonyPrefix]
-        //[HarmonyPatch(nameof(AppMusicPlayer.RefreshList))]
-        //public static bool AppRefresh_AllMixtapes(AppMusicPlayer __instance) {
-        //    if (MusicCuratorPlugin.hasBRR) { MusicQueuePatches.RefreshingPrefix_AllMixtapes(MusicCuratorPlugin.CreateDummyTrack("empty-track"), __instance.GameMusicPlayer.musicTrackQueue);  }
-        //    return true;
-        //}
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(AppMusicPlayer.ToggleShuffle))]
@@ -334,7 +273,7 @@ namespace MusicCurator {
     internal class ReloadMainMenu {
         [HarmonyPatch(nameof(BaseModule.LoadMainMenuScene))]
         [HarmonyPostfix]
-        static void ResetVari() {
+        static void LoadingMenu_ResetVars() {
             MusicCuratorPlugin.resetVariables(); 
         }
     }
