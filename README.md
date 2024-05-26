@@ -29,3 +29,8 @@ This plugin requires the following .dlls to be placed in the \lib\ folder to be 
    - Unity.TextMeshPro.dll
 
 With these files, run "dotnet build" in the project's root folder (same directory as MusicCurator.csproj) and the .dll will be in the \bin\ folder. 
+
+## Credits
+Huge thanks to:
+- **Lazy Duchess**, for the CommonAPI plugin and example code that made this mod possible
+- **Kade, ActualMandM, LunaCapra,** and **PrincessMtH** for their work on BombRushRadio, which inspired this mod
