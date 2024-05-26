@@ -24,9 +24,7 @@
   <Reference Include="0Harmony.dll"><HintPath>lib\0Harmony.dll</HintPath></Reference>
   <Reference Include="BepInEx.dll"><HintPath>lib\BepInEx.dll</HintPath></Reference>
   <Reference Include="Assembly-CSharp.dll"><HintPath>lib\Assembly-CSharp.dll</HintPath></Reference>
-  <Reference Include="UnityEngine.dll"><HintPath>lib\UnityEngine.dll</HintPath></Reference>
   <Reference Include="Unity.TextMeshPro.dll"><HintPath>lib\Unity.TextMeshPro.dll</HintPath></Reference>
-  <Reference Include="UnityEngine.CoreModule.dll"><HintPath>lib\UnityEngine.CoreModule.dll</HintPath></Reference>
   <Reference Include="UnityEngine.UI.dll"><HintPath>lib\UnityEngine.UI.dll</HintPath></Reference>
   <Reference Include="CommonAPI.dll"><HintPath>lib\CommonAPI.dll</HintPath></Reference>
   <Reference Include="BombRushRadio.dll"><HintPath>lib\BombRushRadio.dll</HintPath></Reference>
