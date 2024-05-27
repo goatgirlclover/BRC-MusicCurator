@@ -1,6 +1,8 @@
-# BRC-MusicCurator
+<p align="center"> <img src="icon.png" alt="MusicCurator icon" width="200"/> </p> 
+<h1> <p align="center" > MusicCurator </p> </h1> 
+
  A Bomb Rush Cyberfunk plugin that adds several new features to enhance the in-game listening experience.\
- For more information, [check the Thunderstore page.](https://thunderstore.io/c/bomb-rush-cyberfunk/p/goatgirl/MusicCurator)
+ For more information or release downloads, [check the Thunderstore page.](https://thunderstore.io/c/bomb-rush-cyberfunk/p/goatgirl/MusicCurator)
 ## Features
 - **Instant shuffle**: If you're getting tired of the "Locking Up the Funk" mixtape, this config option chooses a random song to play when loading a save. Also switches your music player app to shuffle mode automatically for maximum convienence. 
 - **Skip tracks**: Hit R3 (Semicolon on keyboard) to skip the currently playing song at any time. No more scrolling through the music app in the middle of a combo!
@@ -15,10 +17,10 @@
 ## Installation
 - If installing using r2modman, click "Install with Mod Manager"
 - If installing manually, extract the .zip and drop the mod files into your \BepInEx\plugins\ folder
-	- Make sure that the "MC-LoopSingle.png" and "MC-PlaylistIcon.png" files are in the same location as the MusicCurator.dll file!
+	- Make sure that the "MC-LoopSingle.png" and "MC-PlaylistIcon.png" files (found in the \include\ folder) are in the same location as the MusicCurator.dll file!
 ## Building from Source
 This plugin requires the following .dlls to be placed in the \lib\ folder to be built:
-- A [publicized](https://github.com/BepInEx/BepInEx.AssemblyPublicizer) version of the game's code, from BRC's Data folder (Assembly-CSharp.dll)
+- A [publicized](https://github.com/CabbageCrow/AssemblyPublicizer) version of the game's code, from BRC's Data folder (Assembly-CSharp.dll)
 - [CommonAPI.dll by Lazy Duchess](https://github.com/LazyDuchess/BRC-CommonAPI/releases)
 - 0Harmony.dll and BepInEx.dll from \BepInEx\core
 - [BombRushRadio.dll](https://github.com/Kade-github/BombRushRadio/releases) for compatibility purposes
@@ -27,3 +29,8 @@ This plugin requires the following .dlls to be placed in the \lib\ folder to be 
    - Unity.TextMeshPro.dll
 
 With these files, run "dotnet build" in the project's root folder (same directory as MusicCurator.csproj) and the .dll will be in the \bin\ folder. 
+
+## Credits
+Huge thanks to:
+- **Lazy Duchess**, for the CommonAPI plugin and example code that made this mod possible
+- **Kade, ActualMandM, LunaCapra,** and **PrincessMtH** for their work on BombRushRadio, which inspired this mod
