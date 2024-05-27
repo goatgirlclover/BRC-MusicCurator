@@ -16,12 +16,13 @@ namespace MusicCurator
         
         public static List<List<string>> playlists = new List<List<string>>();
         public static List<string> defaultExclusions {
-            get { return MCSettings.alwaysSkipMixtapes.Value ? new List<string> {"tryce-beats for the hideout", "dj cyber-locking up the funk mixtape", "dj cyber-house cats mixtape", "dj cyber-beastmode hip hop mixtape", "dj cyber-breaking machine mixtape", "dj cyber-sunshine popping mixtape"} : new List<string>(); }
+            get { return MCSettings.alwaysSkipMixtapes.Value ? new List<string> {"tryce" + MusicCuratorPlugin.songIDSymbol + "beats for the hideout", "dj cyber" + MusicCuratorPlugin.songIDSymbol + "locking up the funk mixtape", "dj cyber" + MusicCuratorPlugin.songIDSymbol + "house cats mixtape", "dj cyber" + MusicCuratorPlugin.songIDSymbol + "beastmode hip hop mixtape", "dj cyber" + MusicCuratorPlugin.songIDSymbol + "breaking machine mixtape", "dj cyber" + MusicCuratorPlugin.songIDSymbol + "sunshine popping mixtape"} : new List<string>(); }
         }
         public static List<string> excludedTracksCarryOver = new List<string>();
         
-        public static readonly int saveVersion = 0; // current save file version (Write())
+        public static readonly int saveVersion = 1; // current save file version (Write())
         private static int readSaveVersion = 0; // save version from file (Read())
+        // 0 = songIDs are still using hyphen, 1 = songIDs use SongIDSymbol
 
         // save location: %localappdata%\Bomb Rush Cyberfunk Modding\MusicCurator\saves
         public PlaylistSaveData() : base("MusicCurator", "Playlists.Slot{0}.data", SaveLocations.LocalAppData)
@@ -55,6 +56,7 @@ namespace MusicCurator
                 for(var z = 0; z < howManyTracksInThisPlaylist; z++) {
                     var trackIndex = reader.ReadInt32(); // track index
                     var trackID = reader.ReadString(); // songID
+                    if (readSaveVersion == 0) {trackID = trackID.Replace("-", MusicCuratorPlugin.songIDSymbol);}
                     newPlaylist.Add(trackID); 
                 }
                 playlists.Add(newPlaylist);
@@ -64,6 +66,7 @@ namespace MusicCurator
             for(var e = 0; e < howManyExclusions; e++) {
                 var trackIndex = reader.ReadInt32(); // track index
                 var trackID = reader.ReadString();
+                if (readSaveVersion == 0) {trackID = trackID.Replace("-", MusicCuratorPlugin.songIDSymbol);}
                 excludedTracksCarryOver.Add(trackID); // songID
                 //MusicCuratorPlugin.excludedTracks.Add()
             }

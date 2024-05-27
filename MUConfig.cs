@@ -53,13 +53,13 @@ namespace MusicCurator
             );
 
             playlistTracksNoExclude = Config.Bind("1. Settings", "Playlists Ignore Blocklist", true, "If true, playlists can play blocklisted tracks. If false, blocklisted tracks are always skipped, including those in a playlist.");
-            skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist; they must be manually skipped to advance in the playlist.");
+            skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist. They must be manually skipped to advance in the playlist.");
 
             //autoExclusionsUnsplit = Config.Bind(
             //    "1. Settings",          // The section under which the option is shown
             //    "Automatic Exclusions",     // The key of the configuration option in the configuration file
             //    "DJ Cyber-, Tryce-",    // The default value
-            //    "List of music tracks that should automatically be excluded, separated by commas. Songs should be formatted as Artist-Title (spaces are required). Note that finding tracks is inclusive and case-insensitive, so you only need part of a song's title (ex. 'Soia-You Can Say Hi' is acceptable). Leave out the song title to filter out all tracks by the artist (ex. DJ Cyber-)."); // Description of the option 
+            //    "hi"); // Description of the option 
             
             keybindsSkipUnsplit = Config.Bind(
                 "2. Keybinds",          // The section under which the option is shown

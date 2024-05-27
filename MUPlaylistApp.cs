@@ -403,17 +403,19 @@ namespace MusicCurator
 
             foreach (MusicTrack mpTrack in MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist]) {
                 string IDDisplay = mpTrack.Artist + " - " + mpTrack.Title;
+                //string trueID = MusicCuratorPlugin.TrackToSongID(mpTrack);
                 nextButton = PhoneUIUtility.CreateSimpleButton(IDDisplay);
 
-                if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay)))) {
+                if (MusicCuratorPlugin.IsInvalidTrack(mpTrack)) {
                     nextButton.Label.faceColor = Color.red;
                     nextButton.LabelSelectedColor = Color.red;
                     nextButton.LabelUnselectedColor = Color.red;
                 }
                 
                 nextButton.OnConfirm += () => {
-                    //if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay), false))) { return; }
-                    MusicCuratorPlugin.appSelectedTrack = MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay));
+                    //if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(trueID, false))) { return; }
+                    //MusicCuratorPlugin.appSelectedTrack = MusicCuratorPlugin.FindTrackBySongID(trueID);
+                    MusicCuratorPlugin.appSelectedTrack = MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].IndexOf(mpTrack);
                     MyPhone.OpenApp(typeof(AppRemoveTrackFromPlaylist));
                 };
                 ScrollView.AddButton(nextButton);
@@ -468,12 +470,13 @@ namespace MusicCurator
         public override void OnAppEnable()
         {
             CreateAndSaveIconlessTitleBar("Edit " + MusicCuratorPlugin.GetPlaylistName(MusicCuratorPlugin.selectedPlaylist));
+            MusicTrack selectedMusicTrack = MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist][MusicCuratorPlugin.appSelectedTrack];
 
             // Create and setup buttons
-            var nextButton = PhoneUIUtility.CreateSimpleButton("Remove track " + MusicCuratorPlugin.appSelectedTrack.Title + " from playlist");
+            var nextButton = PhoneUIUtility.CreateSimpleButton("Remove track " + selectedMusicTrack.Title + " from playlist");
             nextButton.OnConfirm += () => {
-                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Remove(MusicCuratorPlugin.appSelectedTrack);
-                MusicCuratorPlugin.appSelectedTrack = null;
+                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].RemoveAt(MusicCuratorPlugin.appSelectedTrack);
+                MusicCuratorPlugin.appSelectedTrack = -1;
 
                 if (!MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Any()) {
                     MusicCuratorPlugin.selectedPlaylist = -1;
@@ -491,7 +494,7 @@ namespace MusicCurator
 
             nextButton = PhoneUIUtility.CreateSimpleButton("Cancel");
             nextButton.OnConfirm += () => {
-                MusicCuratorPlugin.appSelectedTrack = null;
+                MusicCuratorPlugin.appSelectedTrack = -1;
                 MyPhone.OpenApp(typeof(AppEditPlaylist));
                 MyPhone.m_PreviousApps.Pop();
                 MyPhone.m_PreviousApps.Pop();
@@ -524,7 +527,7 @@ namespace MusicCurator
 
         //private static Sprite IconSprite = null;
 
-        public static List<String> selectedTracksToAddToPlaylist = new List<String>();
+        public static List<MusicTrack> selectedTracksToAddToPlaylist = new List<MusicTrack>();
 
         public static Color LabelSelectedColorDefault = new Color32(49, 90, 165, 255);
         public static Color LabelUnselectedColorDefault = Color.white;
@@ -547,13 +550,13 @@ namespace MusicCurator
                 MusicCuratorPlugin.Log.LogInfo("Tracklist App: Adding " + mpTrack.Artist + " - " + mpTrack.Title);
                 var nextButton = PhoneUIUtility.CreateSimpleButton(mpTrack.Artist + " - " + mpTrack.Title);
                 nextButton.OnConfirm += () => {
-                    if (selectedTracksToAddToPlaylist.Contains(nextButton.Label.text)) {
-                        selectedTracksToAddToPlaylist.Remove(nextButton.Label.text);
+                    if (selectedTracksToAddToPlaylist.Contains(mpTrack)) {
+                        selectedTracksToAddToPlaylist.Remove(mpTrack);
                         nextButton.Label.faceColor = LabelSelectedColorDefault;
                         nextButton.LabelSelectedColor = LabelSelectedColorDefault;
                         nextButton.LabelUnselectedColor = LabelUnselectedColorDefault;
                     } else {
-                        selectedTracksToAddToPlaylist.Add(nextButton.Label.text);
+                        selectedTracksToAddToPlaylist.Add(mpTrack);
                         nextButton.Label.faceColor = Color.green;
                         nextButton.LabelSelectedColor = Color.green;
                         nextButton.LabelUnselectedColor = Color.green;
@@ -579,8 +582,8 @@ namespace MusicCurator
             //if (MusicCuratorPlugin.selectedPlaylist > MusicCuratorPlugin.playlists.Count - 1) {
             //    MusicCuratorPlugin.selectedPlaylist = MusicCuratorPlugin.CreatePlaylist();
             //}
-            foreach (string trackToAddToPlaylist in selectedTracksToAddToPlaylist) {
-                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Add(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(trackToAddToPlaylist)));
+            foreach (MusicTrack trackToAddToPlaylist in selectedTracksToAddToPlaylist) {
+                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Add(trackToAddToPlaylist);
             }
             
             selectedTracksToAddToPlaylist.Clear();
@@ -642,7 +645,7 @@ namespace MusicCurator
                 }
                 MusicCuratorPlugin.playlists.RemoveAt(MusicCuratorPlugin.selectedPlaylist);
                 MusicCuratorPlugin.selectedPlaylist = -1;
-                MusicCuratorPlugin.appSelectedTrack = null;
+                MusicCuratorPlugin.appSelectedTrack = -1;
                 
                 MusicCuratorPlugin.SavePlaylists(); // add this method
                 MyPhone.OpenApp(typeof(AppPlaylists));
@@ -753,9 +756,10 @@ namespace MusicCurator
             // Create and setup buttons
             foreach (MusicTrack mpTrack in MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist]) {
                 string IDDisplay = mpTrack.Artist + " - " + mpTrack.Title;
+                //string trueID = MusicCuratorPlugin.TrackToSongID(mpTrack);
                 var nextButton = PhoneUIUtility.CreateSimpleButton(IDDisplay);
 
-                if (MusicCuratorPlugin.IsInvalidTrack(MusicCuratorPlugin.FindTrackBySongID(MusicCuratorPlugin.ConformSongID(IDDisplay)))) {
+                if (MusicCuratorPlugin.IsInvalidTrack(mpTrack)) {
                     nextButton.Label.faceColor = Color.red;
                     nextButton.LabelSelectedColor = Color.red;
                     nextButton.LabelUnselectedColor = Color.red;

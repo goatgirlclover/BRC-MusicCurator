@@ -50,7 +50,7 @@ namespace MusicCurator
 
         // for apps
         public static int selectedPlaylist = -1;
-        public static MusicTrack appSelectedTrack = null;
+        public static int appSelectedTrack = -1; // index of track in selectedPlaylist
 
         // loop single track 
         public static Sprite loopingSingleTrackSprite = null; // for music app
@@ -66,6 +66,8 @@ namespace MusicCurator
 
         public static int pausePlaybackSamples = 0;
         public static int pausedTrack; 
+
+        public const string songIDSymbol = "♫"; // v0.1.0 = "-", v0.1.1 = "♫"
 
         private void Awake()
         {
@@ -129,7 +131,7 @@ namespace MusicCurator
             hasInstantShuffledAlready = false; // shuffle on game startup
 
             selectedPlaylist = -1;
-            appSelectedTrack = null;
+            appSelectedTrack = -1;
 
             loopingSingleTrackIndex = -1; // index in musicplayer of looped track
 
@@ -401,7 +403,7 @@ namespace MusicCurator
 
         public static MusicTrack LooseFindTrackBySongID(string songID) { // intended for playlist repair
             List<MusicTrack> foundTracksMatchID = new List<MusicTrack>();
-            string[] splitString = songID.Split(new [] { "-" }, StringSplitOptions.None);
+            string[] splitString = SplitSongID(songID);
             //string songIDArtist = splitString[0].Trim();
             string songIDTitle = splitString[1].Trim();
 
@@ -446,7 +448,7 @@ namespace MusicCurator
         public static MusicTrack CreateDummyTrack(string songID) {
             // make an invalid track just to make the rest of the code happy
             MusicTrack dummyTrack = ScriptableObject.CreateInstance<MusicTrack>(); //new MusicTrack();
-            string[] splitString = songID.Split(new [] { "-" }, StringSplitOptions.None);
+            string[] splitString = SplitSongID(songID);
             dummyTrack.AudioClip = null;
             dummyTrack.Artist = splitString[0].Trim();
             dummyTrack.Title = splitString[1].Trim();
@@ -454,11 +456,19 @@ namespace MusicCurator
         }
 
         public static string TrackToSongID(MusicTrack startingTrack) {
-            return ConformSongID(startingTrack.Artist + "-" + startingTrack.Title);
+            return ConformSongID(startingTrack.Artist + songIDSymbol + startingTrack.Title);
         }
 
         public static string ConformSongID(string ogID) {
-            return ogID.Replace(" - ", "-").ToLower().Trim();
+            return ogID.Replace(" " + songIDSymbol + " ", songIDSymbol).ToLower().Trim();
+        }
+
+        public static string[] SplitSongID(string songID, string splitSymbol = songIDSymbol) {
+            string[] returnValue = songID.Split(new [] { songIDSymbol }, StringSplitOptions.None);
+            if (returnValue.Length > 2) { 
+                Log.LogError("SplitSongID: SongID \"" + songID + "\" using illegal symbol \"" + splitSymbol + "\" in either title or artist! Please remove this symbol from this track's title/artist. This track cannot be safely added to playlists or blocklists.");
+            }
+            return returnValue;
         }
 
         public static void LoadPlaylists(List<List<string>> playlistsBySongID) {

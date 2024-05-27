@@ -20,7 +20,7 @@ namespace MusicCurator {
         [HarmonyPatch(nameof(Reptile.Phone.Phone.TurnOff))]
         public static void TurnOffPostfix_ResetAppOptions() {
             MusicCuratorPlugin.selectedPlaylist = -1;
-            MusicCuratorPlugin.appSelectedTrack = null;
+            MusicCuratorPlugin.appSelectedTrack = -1;
         } 
     }
 
