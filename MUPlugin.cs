@@ -170,6 +170,7 @@ namespace MusicCurator
                         excludedTracks.Add(selectedTrack);
                         if (mptb.IsMyTrackPlaying()) { SkipCurrentTrack(); }
                         CheckIfAllExcluded();
+                        SaveExclusions();
                     } else { 
                         excludedTracks.Remove(selectedTrack); 
                     }
@@ -189,8 +190,8 @@ namespace MusicCurator
         }
 
         public static void SkipCurrentTrack() {
+            //LoadExclusions();
             skipping = true;
-            LoadExclusions();
             musicPlayer.ForcePaused();
             //if (excludedTracks.Count >= musicPlayer.musicTrackQueue.AmountOfTracks) { return; }
             musicPlayer.PlayNext();
@@ -513,7 +514,6 @@ namespace MusicCurator
         }
 
         public static void SaveExclusions() {
-            CheckIfAllExcluded();
             PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
 
             foreach (MusicTrack blocklisted in excludedTracks) {
@@ -523,6 +523,7 @@ namespace MusicCurator
             }   
 
             ClearDupes_E();
+            CheckIfAllExcluded();
         }
 
         public static void ClearDupes_P() {
@@ -573,11 +574,13 @@ namespace MusicCurator
         }
 
         public static void CheckIfAllExcluded() {
-            if (ListAInB(GetAllMusic(), excludedTracks)) { 
-                Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
-                excludedTracks.Clear(); 
-                PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
-            } 
+            foreach (MusicTrack music in GetAllMusic()) {
+                if (!excludedTracks.Contains(music)) { return; }
+            }
+            Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
+            excludedTracks.Clear(); 
+            PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
+            LoadExclusions();
         }
     }
 }

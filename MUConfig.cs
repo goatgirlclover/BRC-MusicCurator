@@ -32,6 +32,7 @@ namespace MusicCurator
 
         public static ConfigEntry<bool> playlistTracksNoExclude; 
         public static ConfigEntry<bool> skipRepeatInPlaylists; 
+        public static ConfigEntry<bool> alwaysInstantShuffle;
 
 
         public static void BindSettings(ConfigFile Config) {
@@ -54,7 +55,7 @@ namespace MusicCurator
 
             playlistTracksNoExclude = Config.Bind("1. Settings", "Playlists Ignore Blocklist", true, "If true, playlists can play blocklisted tracks. If false, blocklisted tracks are always skipped, including those in a playlist.");
             skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist. They must be manually skipped to advance in the playlist.");
-
+            alwaysInstantShuffle = Config.Bind("1. Settings", "Always Instant Shuffle", false, "If true, the music player will instantly shuffle every time the player enters a new area, rather than just on startup. Not recommended if playing with MusicCurator's patched BombRushRadio.");
             //autoExclusionsUnsplit = Config.Bind(
             //    "1. Settings",          // The section under which the option is shown
             //    "Automatic Exclusions",     // The key of the configuration option in the configuration file

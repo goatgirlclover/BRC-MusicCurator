@@ -129,7 +129,10 @@ namespace MusicCurator {
             MusicTrack hideoutTrack = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
             MusicTrack chapterTrack = Core.Instance.chapterMusic.GetChapterMusic(Story.GetCurrentObjectiveInfo().chapter);
             MusicCuratorPlugin.missingStageTrack = Reptile.Utility.GetCurrentStage() == Stage.hideout ? chapterTrack : hideoutTrack;
-            if (PlaylistSaveData.excludedTracksCarryOver.Contains(MusicCuratorPlugin.TrackToSongID(MusicCuratorPlugin.missingStageTrack))) { MusicCuratorPlugin.excludedTracks.Add(MusicCuratorPlugin.missingStageTrack); }
+            if (PlaylistSaveData.excludedTracksCarryOver.Contains(MusicCuratorPlugin.TrackToSongID(MusicCuratorPlugin.missingStageTrack))) { 
+                MusicCuratorPlugin.excludedTracks.Add(MusicCuratorPlugin.missingStageTrack); 
+                //MusicCuratorPlugin.SaveExclusions();
+            }
             
             if (MusicCuratorPlugin.hasBRR && MusicCuratorPlugin.missingStageTrack != null) { 
                 BRRHelper.AddMissingTrackToAudios(MusicCuratorPlugin.missingStageTrack); 
@@ -142,7 +145,10 @@ namespace MusicCurator {
             if (MusicCuratorPlugin.missingStageTrack == null || MusicCuratorPlugin.hasBRR || __instance.currentMusicTracks.Contains(MusicCuratorPlugin.missingStageTrack) || !MCSettings.allMixtapes.Value) { return true; }
 
             __instance.currentMusicTracks.Add(MusicCuratorPlugin.missingStageTrack);
-            if (PlaylistSaveData.excludedTracksCarryOver.Contains(MusicCuratorPlugin.TrackToSongID(MusicCuratorPlugin.missingStageTrack))) { MusicCuratorPlugin.excludedTracks.Add(MusicCuratorPlugin.missingStageTrack); }
+            if (PlaylistSaveData.excludedTracksCarryOver.Contains(MusicCuratorPlugin.TrackToSongID(MusicCuratorPlugin.missingStageTrack))) { 
+                MusicCuratorPlugin.excludedTracks.Add(MusicCuratorPlugin.missingStageTrack); 
+                //MusicCuratorPlugin.SaveExclusions();
+            }
 
             return true;
         }
@@ -258,7 +264,7 @@ namespace MusicCurator {
             MusicCuratorPlugin.LoadPlaylists(PlaylistSaveData.playlists);
 
             bool skip = MusicCuratorPlugin.excludedTracks.Contains((__instance.musicPlayer as MusicPlayer).musicTrackQueue.CurrentMusicTrack);
-            if (MCSettings.instantShuffle.Value && !MusicCuratorPlugin.hasInstantShuffledAlready) {
+            if (MCSettings.instantShuffle.Value && (!MusicCuratorPlugin.hasInstantShuffledAlready || MCSettings.alwaysInstantShuffle.Value)) {
                 skip = true;
                 MusicCuratorPlugin.SetAppShuffle(true);
                 MusicCuratorPlugin.hasInstantShuffledAlready = true;
@@ -266,6 +272,8 @@ namespace MusicCurator {
             if (skip) {
                 MusicCuratorPlugin.SkipCurrentTrack();
             }
+
+            MusicCuratorPlugin.LoadExclusions();
         }
     }
 
