@@ -276,7 +276,10 @@ namespace MusicCurator {
                 MusicCuratorPlugin.hasInstantShuffledAlready = true;
             }
             
-            if (skip) { MusicCuratorPlugin.SkipCurrentTrack(); }
+            if (skip) { 
+                MusicCuratorPlugin.SkipCurrentTrack(); 
+                (__instance.musicPlayer as MusicPlayer).playbackSamples = 0;
+            }
             MusicCuratorPlugin.LoadExclusions();
             if (resetAppShuffle) { MusicCuratorPlugin.SetAppShuffle(ogAppShuffle); }
         }
