@@ -264,16 +264,21 @@ namespace MusicCurator {
             MusicCuratorPlugin.LoadPlaylists(PlaylistSaveData.playlists);
 
             bool skip = MusicCuratorPlugin.excludedTracks.Contains((__instance.musicPlayer as MusicPlayer).musicTrackQueue.CurrentMusicTrack);
+            bool resetAppShuffle = false;
+            bool ogAppShuffle = (__instance.musicPlayer as MusicPlayer).shuffle;
+
             if (MCSettings.instantShuffle.Value && (!MusicCuratorPlugin.hasInstantShuffledAlready || MCSettings.alwaysInstantShuffle.Value)) {
                 skip = true;
+                if (MusicCuratorPlugin.hasInstantShuffledAlready) { 
+                    resetAppShuffle = true; 
+                }
                 MusicCuratorPlugin.SetAppShuffle(true);
                 MusicCuratorPlugin.hasInstantShuffledAlready = true;
             }
-            if (skip) {
-                MusicCuratorPlugin.SkipCurrentTrack();
-            }
-
+            
+            if (skip) { MusicCuratorPlugin.SkipCurrentTrack(); }
             MusicCuratorPlugin.LoadExclusions();
+            if (resetAppShuffle) { MusicCuratorPlugin.SetAppShuffle(ogAppShuffle); }
         }
     }
 

@@ -574,13 +574,15 @@ namespace MusicCurator
         }
 
         public static void CheckIfAllExcluded() {
-            foreach (MusicTrack music in GetAllMusic()) {
-                if (!excludedTracks.Contains(music)) { return; }
+            if (GetAllMusic().Any() && excludedTracks.Any()) {
+                foreach (MusicTrack music in GetAllMusic()) {
+                    if (!excludedTracks.Contains(music)) { return; }
+                }
+                Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
+                excludedTracks.Clear(); 
+                PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
+                LoadExclusions();
             }
-            Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
-            excludedTracks.Clear(); 
-            PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
-            LoadExclusions();
         }
     }
 }

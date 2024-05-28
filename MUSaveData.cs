@@ -24,7 +24,7 @@ namespace MusicCurator
         private static int readSaveVersion = 0; // save version from file (Read())
         // 0 = songIDs are still using hyphen, 1 = songIDs use SongIDSymbol
 
-        private static bool hasLoadedEX = false;
+        //private static bool hasLoadedEX = false;
 
         // save location: %localappdata%\Bomb Rush Cyberfunk Modding\MusicCurator\saves
         public PlaylistSaveData() : base("MusicCurator", "Playlists.Slot{0}.data", SaveLocations.LocalAppData)
@@ -73,8 +73,8 @@ namespace MusicCurator
                 //MusicCuratorPlugin.excludedTracks.Add()
             }
 
-            if (!hasLoadedEX) { MusicCuratorPlugin.LoadExclusions(); }
-            hasLoadedEX = true;
+            //if (!hasLoadedEX) { MusicCuratorPlugin.LoadExclusions(); }
+            //hasLoadedEX = true;
         }
 
         public override void Write(BinaryWriter writer)
