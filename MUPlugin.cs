@@ -485,14 +485,14 @@ namespace MusicCurator
             PlaylistSaveData.Instance.AutoSave = true; // ensures PlaylistSaveData doesn't save over with empty playlists
         }
 
-        public static void LoadExclusions() {
+        public static void LoadExclusions(bool skipCheck = false) {
             excludedTracks.Clear();
             foreach (string individualID in PlaylistSaveData.excludedTracksCarryOver) {
                 if (!IsInvalidTrack(FindTrackBySongID(individualID))) {
                     excludedTracks.Add(FindTrackBySongID(individualID));
                 }
             }
-            CheckIfAllExcluded();
+            if (!skipCheck) { CheckIfAllExcluded(); }
         }
 
         public static void SavePlaylists(bool skipClear = false) {
@@ -523,7 +523,7 @@ namespace MusicCurator
             }   
 
             ClearDupes_E();
-            CheckIfAllExcluded();
+            //CheckIfAllExcluded();
         }
 
         public static void ClearDupes_P() {
@@ -581,7 +581,7 @@ namespace MusicCurator
                 Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
                 excludedTracks.Clear(); 
                 PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
-                LoadExclusions();
+                LoadExclusions(true);
             }
         }
     }
