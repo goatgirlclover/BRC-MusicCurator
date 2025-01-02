@@ -149,7 +149,7 @@ namespace MusicCurator
         }
 
         private void Update() {
-            if (Core.Instance == null) { return; }
+            if (Core.Instance == null || musicPlayer == null) { return; }
 
             if (musicPlayer.IsPlaying) {
                 if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {
@@ -165,13 +165,17 @@ namespace MusicCurator
                 } /*else if (MusicCuratorPlugin.AllUnlockedTracksExcluded() && !musicPlayer.isPlaying) { musicPlayer.ForcePaused(); }*/
 
                 List<AudioClip> excludedAudioClips = new List<AudioClip>(); 
-                foreach (MusicTrack excludedTrack in excludedTracks) { excludedAudioClips.Add(excludedTrack.AudioClip); }
+                foreach (MusicTrack excludedTrack in excludedTracks) { 
+                    if (excludedTrack != null && excludedTrack.AudioClip != null) { excludedAudioClips.Add(excludedTrack.AudioClip); }
+                }
 
                 List<AudioSource> audioSources = new List<AudioSource> {Core.Instance.musicBlendingAudioSource, Core.Instance.musicAudioSource};
                 foreach (CutsceneAudioTrack meow in GameObject.FindObjectsOfType<CutsceneAudioTrack>()) { audioSources.Add(meow.source); }
                 audioSources = audioSources.Distinct().ToList();
                 
-                foreach (AudioSource src in audioSources) { src.mute = excludedAudioClips.Contains(src.clip); }
+                foreach (AudioSource src in audioSources) { if (src != null && src.clip != null) { 
+                    src.mute = excludedAudioClips.Contains(src.clip); 
+                } }
                 
             } else if (!MCSettings.unlockEncounterMusic.Value) {
                 if (musicPlayer.IsPlaying) {
@@ -184,7 +188,12 @@ namespace MusicCurator
             }
 
             if (player != null && player.phone != null && MCSettings.unlockPhone.Value) {
-                if (!WorldHandler.instance.currentEncounter.allowPhone) { WorldHandler.instance.currentEncounter.allowPhone = true; }
+                if (WorldHandler.instance != null && WorldHandler.instance.currentEncounter != null) {
+                    if (!WorldHandler.instance.currentEncounter.allowPhone) { 
+                        WorldHandler.instance.currentEncounter.allowPhone = true; 
+                    }
+                }
+                
                 if (player.phoneLocked) { player.LockPhone(false); }
                 if (!player.phone.m_PhoneAllowed) { player.phone.AllowPhone(true); }
             }
