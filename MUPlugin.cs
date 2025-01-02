@@ -225,6 +225,7 @@ namespace MusicCurator
                         SaveExclusions();
                     } else { 
                         excludedTracks.Remove(selectedTrack); 
+                        SaveExclusions();
                     }
                 } 
                 
@@ -676,6 +677,7 @@ namespace MusicCurator
 
         public static void SaveExclusions() {
             //PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
+            PlaylistSaveData.excludedTracksCarryOver.Clear();
 
             foreach (MusicTrack blocklisted in excludedTracks) {
                 if (!PlaylistSaveData.excludedTracksCarryOver.Contains(TrackToSongID(blocklisted))) {
