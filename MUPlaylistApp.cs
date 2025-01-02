@@ -62,16 +62,16 @@ namespace MusicCurator
             MusicCuratorPlugin.selectedPlaylist = -1;
 
             // Create and setup buttons
-            var nextButton = PhoneUIUtility.CreateSimpleButton("Create new playlist...");
+            var nextButton = PhoneUIUtility.CreateSimpleButton("Manage queue/blocklist...");
             nextButton.OnConfirm += () => {
-                //MusicCuratorPlugin.selectedPlaylist = MusicCuratorPlugin.CreatePlaylist(); 
-                MyPhone.OpenApp(typeof(AppNewPlaylist));
+                MyPhone.OpenApp(typeof(AppManageQueueAndExclusions));
             };
             ScrollView.AddButton(nextButton);
 
-            nextButton = PhoneUIUtility.CreateSimpleButton("Manage queue/blocklist...");
+            nextButton = PhoneUIUtility.CreateSimpleButton("Create new playlist...");
             nextButton.OnConfirm += () => {
-                MyPhone.OpenApp(typeof(AppManageQueueAndExclusions));
+                //MusicCuratorPlugin.selectedPlaylist = MusicCuratorPlugin.CreatePlaylist(); 
+                MyPhone.OpenApp(typeof(AppNewPlaylist));
             };
             ScrollView.AddButton(nextButton);
 
@@ -136,7 +136,24 @@ namespace MusicCurator
             ScrollView = PhoneScrollView.Create(this);
 
             // Create and setup buttons
-            var nextButton = PhoneUIUtility.CreateSimpleButton("Clear queue");
+            var nextButton = PhoneUIUtility.CreateSimpleButton("Block tracks...");
+            nextButton.OnConfirm += () => {
+                AppPlaylistTracklist.addingToBlocklist = true;
+                MyPhone.OpenApp(typeof(AppPlaylistTracklist));
+            };
+            ScrollView.AddButton(nextButton);
+
+            nextButton = PhoneUIUtility.CreateSimpleButton("Queue tracks...");
+            nextButton.OnConfirm += () => {
+                AppPlaylistTracklist.addingToQueue = true;
+                MyPhone.OpenApp(typeof(AppPlaylistTracklist));
+            };
+            ScrollView.AddButton(nextButton);
+
+            nextButton = PhoneUIUtility.CreateSimpleButton("Clear queue");
+            nextButton.Label.faceColor = Color.red;
+            nextButton.LabelSelectedColor = Color.red;
+            nextButton.LabelUnselectedColor = Color.red;
             nextButton.OnConfirm += () => {
                 MusicCuratorPlugin.playlistTracks.Clear();
                 MusicCuratorPlugin.currentPlaylistIndex = -1;
@@ -145,6 +162,9 @@ namespace MusicCurator
             ScrollView.AddButton(nextButton);
 
             nextButton = PhoneUIUtility.CreateSimpleButton("Reset blocklist");
+            nextButton.Label.faceColor = Color.red;
+            nextButton.LabelSelectedColor = Color.red;
+            nextButton.LabelUnselectedColor = Color.red;
             nextButton.OnConfirm += () => {
                 MusicCuratorPlugin.excludedTracks.Clear(); 
                 MusicCuratorPlugin.SaveExclusions();
@@ -283,7 +303,7 @@ namespace MusicCurator
             }
             ScrollView.AddButton(nextButton);
 
-            nextButton = PhoneUIUtility.CreateSimpleButton("Edit playlist");
+            nextButton = PhoneUIUtility.CreateSimpleButton("View/edit playlist");
             nextButton.OnConfirm += () => {
                 MyPhone.OpenApp(typeof(AppEditPlaylist));
             };
@@ -473,8 +493,46 @@ namespace MusicCurator
             MusicTrack selectedMusicTrack = MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist][MusicCuratorPlugin.appSelectedTrack];
 
             // Create and setup buttons
-            var nextButton = PhoneUIUtility.CreateSimpleButton("Remove track " + selectedMusicTrack.Title + " from playlist");
-            nextButton.OnConfirm += () => {
+            if (!MusicCuratorPlugin.IsInvalidTrack(selectedMusicTrack)) {
+                var nextButton = PhoneUIUtility.CreateSimpleButton("Shuffle playlist from " + selectedMusicTrack.Title);
+                nextButton.OnConfirm += () => {
+                    MusicCuratorPlugin.SetAppShuffle(true);
+                    MusicCuratorPlugin.shufflingPlaylist = true;
+                    MusicCuratorPlugin.queuedTracks.Clear();
+                    MusicCuratorPlugin.LoadPlaylistIntoQueue(MusicCuratorPlugin.selectedPlaylist, true);
+                    
+                    MusicCuratorPlugin.PlayTrack(selectedMusicTrack);
+                    MusicCuratorPlugin.ReorderPlaylistInQueue(false);
+                    MusicCuratorPlugin.playlistStartingTrack = selectedMusicTrack;
+
+                    MusicCuratorPlugin.appSelectedTrack = -1;
+                    MyPhone.OpenApp(typeof(AppEditPlaylist));
+                    MyPhone.m_PreviousApps.Pop();
+                    MyPhone.m_PreviousApps.Pop();
+                };
+                ScrollView.AddButton(nextButton);
+                
+                nextButton = PhoneUIUtility.CreateSimpleButton("Start playlist from " + selectedMusicTrack.Title);
+                nextButton.OnConfirm += () => {
+                    MusicCuratorPlugin.SetAppShuffle(false);
+                    MusicCuratorPlugin.shufflingPlaylist = false;
+                    MusicCuratorPlugin.queuedTracks.Clear();
+                    MusicCuratorPlugin.LoadPlaylistIntoQueue(MusicCuratorPlugin.selectedPlaylist, false);
+
+                    MusicCuratorPlugin.PlayTrack(selectedMusicTrack);
+                    MusicCuratorPlugin.ReorderPlaylistInQueue(false);
+                    MusicCuratorPlugin.playlistStartingTrack = selectedMusicTrack;
+
+                    MusicCuratorPlugin.appSelectedTrack = -1;
+                    MyPhone.OpenApp(typeof(AppEditPlaylist));
+                    MyPhone.m_PreviousApps.Pop();
+                    MyPhone.m_PreviousApps.Pop();
+                };
+                ScrollView.AddButton(nextButton);
+            }
+            
+            var lastButton = PhoneUIUtility.CreateSimpleButton("Remove track " + selectedMusicTrack.Title + " from playlist");
+            lastButton.OnConfirm += () => {
                 MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].RemoveAt(MusicCuratorPlugin.appSelectedTrack);
                 MusicCuratorPlugin.appSelectedTrack = -1;
 
@@ -490,16 +548,16 @@ namespace MusicCurator
 
                 MusicCuratorPlugin.SavePlaylists(); 
             };
-            ScrollView.AddButton(nextButton);
+            ScrollView.AddButton(lastButton);
 
-            nextButton = PhoneUIUtility.CreateSimpleButton("Cancel");
-            nextButton.OnConfirm += () => {
+            lastButton = PhoneUIUtility.CreateSimpleButton("Cancel");
+            lastButton.OnConfirm += () => {
                 MusicCuratorPlugin.appSelectedTrack = -1;
                 MyPhone.OpenApp(typeof(AppEditPlaylist));
                 MyPhone.m_PreviousApps.Pop();
                 MyPhone.m_PreviousApps.Pop();
             };
-            ScrollView.AddButton(nextButton);
+            ScrollView.AddButton(lastButton);
 
             base.OnAppEnable();
             //MyPhone.m_PreviousApps.Pop();
@@ -533,6 +591,10 @@ namespace MusicCurator
         public static Color LabelUnselectedColorDefault = Color.white;
 
         public static bool creatingPlaylist = false;
+        public static bool addingToBlocklist = false;
+        public static bool addingToQueue = false;
+
+        public static Color selectedLabelColor { get { return addingToBlocklist ? Color.red : (addingToQueue ? Color.cyan : Color.green); } } 
 
         // Load the icon for this app and register it with the PhoneAPI, so that it shows up on the homescreen.
         public static void Initialize()
@@ -544,11 +606,27 @@ namespace MusicCurator
         public override void OnAppEnable()
         {
             // Create and setup buttons
-            foreach (MusicTrack mpTrack in MusicCuratorPlugin.GetAllMusic()) {
-                if (MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(mpTrack)) { continue; }
+            List<MusicTrack> availableTracks = addingToBlocklist ? MusicCuratorPlugin.GetAllMusicIncludingLocked(true) : MusicCuratorPlugin.GetAllMusic();
+            selectedTracksToAddToPlaylist.Clear();
+
+            foreach (MusicTrack mpTrack in availableTracks) {
+                if (!addingToQueue && !addingToBlocklist && !creatingPlaylist) {
+                    if (MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(mpTrack)) { continue; }
+                } else if (addingToQueue || addingToBlocklist) {
+                    selectedTracksToAddToPlaylist = addingToBlocklist ? MusicCuratorPlugin.excludedTracks : MusicCuratorPlugin.queuedTracks;
+                }
                 
                 MusicCuratorPlugin.Log.LogInfo("Tracklist App: Adding " + mpTrack.Artist + " - " + mpTrack.Title);
                 var nextButton = PhoneUIUtility.CreateSimpleButton(mpTrack.Artist + " - " + mpTrack.Title);
+
+                if ((addingToBlocklist && MusicCuratorPlugin.TrackIsExcluded(mpTrack)) ||
+                (addingToQueue && MusicCuratorPlugin.queuedTracks.Contains(mpTrack))) { 
+                /*(!creatingPlaylist && MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(mpTrack))) { */
+                    nextButton.Label.faceColor = selectedLabelColor;
+                    nextButton.LabelSelectedColor = selectedLabelColor;
+                    nextButton.LabelUnselectedColor = selectedLabelColor;
+                }
+
                 nextButton.OnConfirm += () => {
                     if (selectedTracksToAddToPlaylist.Contains(mpTrack)) {
                         selectedTracksToAddToPlaylist.Remove(mpTrack);
@@ -557,23 +635,21 @@ namespace MusicCurator
                         nextButton.LabelUnselectedColor = LabelUnselectedColorDefault;
                     } else {
                         selectedTracksToAddToPlaylist.Add(mpTrack);
-                        nextButton.Label.faceColor = Color.green;
-                        nextButton.LabelSelectedColor = Color.green;
-                        nextButton.LabelUnselectedColor = Color.green;
+                        nextButton.Label.faceColor = selectedLabelColor;
+                        nextButton.LabelSelectedColor = selectedLabelColor;
+                        nextButton.LabelUnselectedColor = selectedLabelColor;
                     }
                 };
                 ScrollView.AddButton(nextButton);
             }
-            selectedTracksToAddToPlaylist.Clear();
+
             base.OnAppEnable();
             ScrollView.ScrollUp();
         }
 
         public override void OnAppDisable()
         {
-            creatingPlaylist = false;
             ScrollView.RemoveAllButtons();
-            selectedTracksToAddToPlaylist.Clear();
             base.OnAppDisable();
         }
 
@@ -582,19 +658,32 @@ namespace MusicCurator
             //if (MusicCuratorPlugin.selectedPlaylist > MusicCuratorPlugin.playlists.Count - 1) {
             //    MusicCuratorPlugin.selectedPlaylist = MusicCuratorPlugin.CreatePlaylist();
             //}
-            foreach (MusicTrack trackToAddToPlaylist in selectedTracksToAddToPlaylist) {
-                MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Add(trackToAddToPlaylist);
+
+            if (addingToBlocklist) { MusicCuratorPlugin.excludedTracks = selectedTracksToAddToPlaylist; }
+            else if (addingToQueue) { MusicCuratorPlugin.queuedTracks = selectedTracksToAddToPlaylist; }
+            else {
+                foreach (MusicTrack trackToAddToPlaylist in selectedTracksToAddToPlaylist) {
+                    if (!MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(trackToAddToPlaylist)) { 
+                        MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Add(trackToAddToPlaylist);
+                    }
+                }
             }
             
-            selectedTracksToAddToPlaylist.Clear();
             MusicCuratorPlugin.SavePlaylists(); // add this method
             MusicCuratorPlugin.ReorderPlaylistInQueue(MusicCuratorPlugin.musicPlayer.shuffle);
+
+            creatingPlaylist = false;
+            addingToBlocklist = false;
+            addingToQueue = false;
+            selectedTracksToAddToPlaylist.Clear();
             
             if (creatingPlaylist) {
                 creatingPlaylist = false;
                 MyPhone.OpenApp(typeof(AppPlaylists));
+            } else if (addingToBlocklist || addingToQueue) {
+                MyPhone.OpenApp(typeof(AppPlaylists)); // base.OnReleaseLeft();
             } else {
-                base.OnReleaseLeft(); 
+                base.OnReleaseLeft();
             }
         }
 

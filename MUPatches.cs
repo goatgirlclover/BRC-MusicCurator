@@ -36,8 +36,15 @@ namespace MusicCurator {
         [HarmonyPatch(nameof(MusicPlayer.PlayNext))]
         //[HarmonyPriority(Priority.Low)] //[HarmonyAfter(["com.dragsun.Shufleify"])] 
         public static void PlayNextPostfix_OverrideNextTrack(MusicPlayer __instance) {
+            // all tracks excluded 
+            if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {
+                if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
+                    __instance.ForcePaused();
+                }
+            }
+
             // looping single track
-            if (MusicCuratorPlugin.loopingSingleTrackIndex >= 0) {
+            else if (MusicCuratorPlugin.loopingSingleTrackIndex >= 0) {
                 MusicTrack nextTrack = __instance.GetMusicTrack(MusicCuratorPlugin.loopingSingleTrackIndex);
                 if (!MusicCuratorPlugin.IsInvalidTrack(nextTrack)) { MusicCuratorPlugin.PlayTrack(nextTrack); }
                 else { // stop looping single track
@@ -58,7 +65,7 @@ namespace MusicCurator {
                 MusicTrack nextTrack = MusicCuratorPlugin.playlistTracks[0];
                 
                 // if can't play this track...
-                bool cantPlay = MusicCuratorPlugin.IsInvalidTrack(nextTrack) || !__instance.musicTrackQueue.currentMusicTracks.Contains(nextTrack) || (!MCSettings.playlistTracksNoExclude.Value && MusicCuratorPlugin.excludedTracks.Contains(nextTrack));
+                bool cantPlay = MusicCuratorPlugin.IsInvalidTrack(nextTrack) || !__instance.musicTrackQueue.currentMusicTracks.Contains(nextTrack) || (!MCSettings.playlistTracksNoExclude.Value && MusicCuratorPlugin.TrackIsExcluded(nextTrack));
                 if (cantPlay) {
                     // try to find valid track in playlist
                     var i = 0;
@@ -67,7 +74,7 @@ namespace MusicCurator {
                         MusicCuratorPlugin.playlistTracks.RemoveAt(0);
                         MusicCuratorPlugin.playlistTracks.Add(nextTrack);
                         nextTrack = MusicCuratorPlugin.playlistTracks[0];
-                        cantPlay = MusicCuratorPlugin.IsInvalidTrack(nextTrack) || !__instance.musicTrackQueue.currentMusicTracks.Contains(nextTrack) || (!MCSettings.playlistTracksNoExclude.Value && MusicCuratorPlugin.excludedTracks.Contains(nextTrack));
+                        cantPlay = MusicCuratorPlugin.IsInvalidTrack(nextTrack) || !__instance.musicTrackQueue.currentMusicTracks.Contains(nextTrack) || (!MCSettings.playlistTracksNoExclude.Value && MusicCuratorPlugin.TrackIsExcluded(nextTrack));
                     }
                     
                     // if failed to find valid track, stop playing the playlist and give up
@@ -91,8 +98,23 @@ namespace MusicCurator {
                 }
             }
 
+            // looping event song
+            else if (MusicCuratorPlugin.skipping && MusicCuratorPlugin.previousTrack == __instance.GetMusicTrack(__instance.CurrentTrackIndex) &&
+            MCSettings.unlockEncounterMusic.Value) { //__instance.AmountOfTracks == 1 && !MusicCuratorPlugin.ListAInB(MusicCuratorPlugin.GetAllUnlockedMusic(), MusicCuratorPlugin.GetAllMusic())) {
+                MusicCuratorPlugin.player.phone.GetAppInstance<AppMusicPlayer>().OnAppInit();
+                MusicCuratorPlugin.player.phone.GetAppInstance<AppMusicPlayer>().OnAppEnable();
+                MusicCuratorPlugin.player.phone.GetAppInstance<AppMusicPlayer>().PlaySong(1);
+                MusicCuratorPlugin.SkipCurrentTrack();
+                MusicCuratorPlugin.Log.LogInfo("Skipped encounter track (hopefully)");
+            }
+
+            // strict blocklisting mode
+            /*else if (MusicCuratorPlugin.TrackIsExcluded(__instance.musicTrackQueue.CurrentMusicTrack)) {
+                __instance.ForcePaused();
+            }*/
+
             // handle excluded tracks (moved to trackqueue)
-            //else if (MusicCuratorPlugin.excludedTracks.Contains(__instance.musicTrackQueue.CurrentMusicTrack) && !MusicCuratorPlugin.ContinuingStageTrack) {
+            //else if (MusicCuratorPlugin.TrackIsExcluded(__instance.musicTrackQueue.CurrentMusicTrack) && !MusicCuratorPlugin.ContinuingStageTrack) {
             //    MusicCuratorPlugin.SkipCurrentTrack();
             //} 
         }
@@ -172,7 +194,7 @@ namespace MusicCurator {
                 nextInQueue = __instance.indexQueue.GetNextInQueue(__instance.currentTrackIndex, i);
                 
                 bool dontSkipPlaylistTrack = MusicCuratorPlugin.currentPlaylistIndex != -1 && MusicCuratorPlugin.playlistTracks.Contains(__instance.GetMusicTrack(nextInQueue)) && MCSettings.playlistTracksNoExclude.Value; 
-                if (!MusicCuratorPlugin.excludedTracks.Contains(__instance.GetMusicTrack(nextInQueue)) && !dontSkipPlaylistTrack)
+                if (!MusicCuratorPlugin.TrackIsExcluded(__instance.GetMusicTrack(nextInQueue)) && !dontSkipPlaylistTrack)
                 {
                     solved = true;
                     break;
@@ -263,7 +285,7 @@ namespace MusicCurator {
             MusicCuratorPlugin.ContinuingStageTrack = false;
             MusicCuratorPlugin.LoadPlaylists(PlaylistSaveData.playlists);
 
-            bool skip = MusicCuratorPlugin.excludedTracks.Contains((__instance.musicPlayer as MusicPlayer).musicTrackQueue.CurrentMusicTrack);
+            bool skip = MusicCuratorPlugin.TrackIsExcluded((__instance.musicPlayer as MusicPlayer).musicTrackQueue.CurrentMusicTrack);
             bool resetAppShuffle = false;
             bool ogAppShuffle = (__instance.musicPlayer as MusicPlayer).shuffle;
 

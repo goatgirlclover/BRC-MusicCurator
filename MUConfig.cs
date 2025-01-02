@@ -34,6 +34,10 @@ namespace MusicCurator
         public static ConfigEntry<bool> skipRepeatInPlaylists; 
         public static ConfigEntry<bool> alwaysInstantShuffle;
 
+        public static ConfigEntry<bool> strictBlocklist;
+        //public static ConfigEntry<bool> superStrictBlocklist;
+        public static ConfigEntry<bool> unlockEncounterMusic;
+        public static ConfigEntry<bool> unlockPhone;
 
         public static void BindSettings(ConfigFile Config) {
             customPlaylistNamesUnsplit = Config.Bind(
@@ -56,11 +60,10 @@ namespace MusicCurator
             playlistTracksNoExclude = Config.Bind("1. Settings", "Playlists Ignore Blocklist", true, "If true, playlists can play blocklisted tracks. If false, blocklisted tracks are always skipped, including those in a playlist.");
             skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist. They must be manually skipped to advance in the playlist.");
             alwaysInstantShuffle = Config.Bind("1. Settings", "Always Instant Shuffle", false, "If true, the music player will instantly shuffle every time the player enters a new area, rather than just on startup. Not recommended if playing with MusicCurator's patched BombRushRadio.");
-            //autoExclusionsUnsplit = Config.Bind(
-            //    "1. Settings",          // The section under which the option is shown
-            //    "Automatic Exclusions",     // The key of the configuration option in the configuration file
-            //    "DJ Cyber-, Tryce-",    // The default value
-            //    "hi"); // Description of the option 
+
+            unlockEncounterMusic = Config.Bind("1. Settings", "Allow Skipping Encounter Music", true, "Allows the skip keybind to pevent forced story tracks (ex. crew battles, dream sequences) from looping forever, unlocking all unlocked tracks to play.");
+            strictBlocklist = Config.Bind("1. Settings", "Strict Blocklisting Mode", false, "By default, blocklisted songs can play in cutscenes and story events, as well as when manually played. This setting attempts to prevent blocklisted songs from ever playing in any situation. For best results, set \"Playlists Ignore Blocklist\" to false as well.");
+            unlockPhone = Config.Bind("1. Settings", "Always Unlock Phone", false, "Experimental! Allows you to use your phone during story events. Intended only for changing the music during these sequences - using other apps may cause progression issues.");
             
             keybindsSkipUnsplit = Config.Bind(
                 "2. Keybinds",          // The section under which the option is shown
@@ -73,7 +76,7 @@ namespace MusicCurator
                 "Quote, JoystickButton8",    // The default value
                 "List of KeyCodes that can be pressed to queue up tracks, separated by commas."); // Description of the option 
 
-            keybindsShuffleUnsplit = Config.Bind("2. Keybinds", "Quick Toggle Shuffle Keybinds", "JoystickButton6, LeftBracket", "List of KeyCodes that can be pressed to quickly toggle shuffling, separated by commas. Only works if the music app is open.");
+            keybindsShuffleUnsplit = Config.Bind("2. Keybinds", "Quick Toggle Shuffle Keybinds", "JoystickButton6, LeftBracket", "List of KeyCodes that can be pressed to quickly toggle shuffling, separated by commas. Note that looping a single track can only be enabled in the music app.");
             keybindsPauseUnsplit = Config.Bind("2. Keybinds", "Pause Music Keybinds", "F13, Pause", "List of KeyCodes that can be pressed to pause the current track, separated by commas.");
 
             customPlaylistNamesUnsplit.SettingChanged += UpdateSettingsEvent;

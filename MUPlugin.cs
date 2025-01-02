@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.1.0")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.2.0")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -47,6 +47,9 @@ namespace MusicCurator
         //public static bool disableSkipping = false;
         public static bool ContinuingStageTrack = false; // if true, don't reset queue on next track lpay
         public static bool hasInstantShuffledAlready = false; // shuffle on game startup
+        
+        public static MusicTrack previousTrack; 
+        //public static int numberOfConsecutiveSkips = 0; 
 
         // for apps
         public static int selectedPlaylist = -1;
@@ -146,6 +149,46 @@ namespace MusicCurator
         }
 
         private void Update() {
+            if (Core.Instance == null) { return; }
+
+            if (musicPlayer.IsPlaying) {
+                if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {
+                    if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
+                        musicPlayer.ForcePaused();
+                    }
+                }
+            }
+
+            if (MCSettings.strictBlocklist.Value) {
+                if (musicPlayer.IsPlaying && GetAllUnlockedMusic().Count > 1 && !MusicCuratorPlugin.AllUnlockedTracksExcluded() && MusicCuratorPlugin.TrackIsExcluded(musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex))) {
+                    MusicCuratorPlugin.SkipCurrentTrack();
+                } /*else if (MusicCuratorPlugin.AllUnlockedTracksExcluded() && !musicPlayer.isPlaying) { musicPlayer.ForcePaused(); }*/
+
+                List<AudioClip> excludedAudioClips = new List<AudioClip>(); 
+                foreach (MusicTrack excludedTrack in excludedTracks) { excludedAudioClips.Add(excludedTrack.AudioClip); }
+
+                List<AudioSource> audioSources = new List<AudioSource> {Core.Instance.musicBlendingAudioSource, Core.Instance.musicAudioSource};
+                foreach (CutsceneAudioTrack meow in GameObject.FindObjectsOfType<CutsceneAudioTrack>()) { audioSources.Add(meow.source); }
+                audioSources = audioSources.Distinct().ToList();
+                
+                foreach (AudioSource src in audioSources) { src.mute = excludedAudioClips.Contains(src.clip); }
+                
+            } else if (!MCSettings.unlockEncounterMusic.Value) {
+                if (musicPlayer.IsPlaying) {
+                    if (MusicCuratorPlugin.AllAvailableTracksExcluded()) {
+                        if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
+                            musicPlayer.ForcePaused();
+                        }
+                    }
+                }
+            }
+
+            if (player != null && player.phone != null && MCSettings.unlockPhone.Value) {
+                if (!WorldHandler.instance.currentEncounter.allowPhone) { WorldHandler.instance.currentEncounter.allowPhone = true; }
+                if (player.phoneLocked) { player.LockPhone(false); }
+                if (!player.phone.m_PhoneAllowed) { player.phone.AllowPhone(true); }
+            }
+             
             if (pressedAnyButtonIn(MCSettings.keybindsPause)) {
                 if (musicPlayer.IsPlaying) {
                     pausePlaybackSamples = musicPlayer.CurrentTrackSamples;
@@ -157,19 +200,19 @@ namespace MusicCurator
                 }
             }
 
+            if (pressedAnyButtonIn(MCSettings.keybindsShuffle)) {
+                SetAppShuffle(!musicPlayer.shuffle);
+            }
+
             if (PlayerUsingMusicApp()) {
                 MusicPlayerTrackButton mptb = (player.phone.AppInstances["AppMusicPlayer"] as AppMusicPlayer).m_TrackList.SelectedButtton as MusicPlayerTrackButton;
                 MusicTrack selectedTrack = mptb.AssignedContent as MusicTrack;
 
-                if (pressedAnyButtonIn(MCSettings.keybindsShuffle)) {
-                    SetAppShuffle(!musicPlayer.shuffle);
-                }
-
                 if (pressedAnyButtonIn(MCSettings.keybindsSkip)) {
-                    if (!excludedTracks.Contains(selectedTrack)) { 
+                    if (!TrackIsExcluded(selectedTrack)) { 
                         excludedTracks.Add(selectedTrack);
                         if (mptb.IsMyTrackPlaying()) { SkipCurrentTrack(); }
-                        CheckIfAllExcluded();
+                        //CheckIfAllExcluded();
                         SaveExclusions();
                     } else { 
                         excludedTracks.Remove(selectedTrack); 
@@ -191,11 +234,15 @@ namespace MusicCurator
 
         public static void SkipCurrentTrack() {
             //LoadExclusions();
+            previousTrack = musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex);
             skipping = true;
             musicPlayer.ForcePaused();
             //if (excludedTracks.Count >= musicPlayer.musicTrackQueue.AmountOfTracks) { return; }
-            musicPlayer.PlayNext();
+            if (!MusicCuratorPlugin.AllUnlockedTracksExcluded() || (MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
+                musicPlayer.PlayNext();
+            }
             skipping = false;
+            previousTrack = null;
         }
 
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {
@@ -237,7 +284,7 @@ namespace MusicCurator
         //    if (inPlaylist) {
         //            button.m_TitleLabel.color = Color.cyan;
         //            button.m_ArtistLabel.color = Color.cyan;
-            if (excludedTracks.Contains(assignedTrack)) {
+            if (TrackIsExcluded(assignedTrack)) {
                     button.m_TitleLabel.color = Color.red;
                     button.m_ArtistLabel.color = Color.red;
         //    } else if (queuedTracks.Contains(assignedTrack)) {
@@ -259,7 +306,15 @@ namespace MusicCurator
                 //SkipCurrentTrack();
                 return;
             }
+
             musicPlayer.ForcePaused();
+
+            if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) { 
+                if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
+                    return;
+                } 
+            }
+
             ContinuingStageTrack = true; // workaround - bypass our prefix so we don't clear the queue
             musicPlayer.PlayFrom(indexOfTarget, playbackSamples);
             ContinuingStageTrack = false;
@@ -334,7 +389,104 @@ namespace MusicCurator
             if (save) { SavePlaylists(true); }
         }
 
+        /* avaliable music in musicplayer */
         public static List<MusicTrack> GetAllMusic() { return musicPlayer.musicTrackQueue.currentMusicTracks; }
+
+        /* should be avaliable in musicplayer - may not be due to forced music during story events */
+        public static List<MusicTrack> GetAllUnlockedMusic() { 
+            if (player == null) { return GetAllMusic(); }
+            List<MusicTrack> allTracks = new List<MusicTrack>(); 
+			Story.ObjectiveInfo currentObjectiveInfo = Story.GetCurrentObjectiveInfo();
+			
+            MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
+            MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
+            if (MCSettings.allMixtapes.Value) { allTracks.Add(chapterMusic2); }
+			if (MCSettings.allMixtapes.Value || Core.Instance.BaseModule.CurrentStage == Stage.hideout) { allTracks.Add(musicTrackByID); }
+            
+            MusicTrack chapterMusic3 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.GetCurrentObjectiveInfo().chapter);
+            if (!allTracks.Contains(chapterMusic3)) { allTracks.Add(chapterMusic3); }
+
+			AUnlockable[] unlockables = player.phone.GetAppInstance<AppMusicPlayer>().Unlockables;
+			for (int i = 0; i < unlockables.Length; i++)
+			{
+				MusicTrack musicTrack = unlockables[i] as MusicTrack;
+                if (Core.Instance.Platform.User.GetUnlockableSaveDataFor(musicTrack).IsUnlocked) {
+                    musicTrack.isRepeatable = false;
+                    if (!allTracks.Contains(musicTrack)) { allTracks.Add(musicTrack); }
+                }
+			}
+
+            foreach (MusicTrack additionalTrack in GetAllMusic()) {
+                if (!allTracks.Contains(additionalTrack)) { allTracks.Add(additionalTrack); }
+            }
+
+            if (hasBRR) { 
+                foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
+                    if (!allTracks.Contains(customTrack)) { allTracks.Add(customTrack); }
+                }
+            }
+
+            return allTracks;
+        }
+        
+        /* all music tracks in the game */
+        public static List<MusicTrack> GetAllMusicIncludingLocked(bool getInvalid = false) {
+            List<MusicTrack> allTracks = new List<MusicTrack>(); 
+			Story.ObjectiveInfo currentObjectiveInfo = Story.GetCurrentObjectiveInfo();
+			
+            MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
+			allTracks.Add(musicTrackByID);
+
+			AUnlockable[] unlockables = player.phone.GetAppInstance<AppMusicPlayer>().Unlockables;
+			for (int i = 0; i < unlockables.Length; i++)
+			{
+				MusicTrack musicTrack = unlockables[i] as MusicTrack;
+                musicTrack.isRepeatable = false;
+                allTracks.Add(musicTrack);
+			}
+
+            MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
+            allTracks.Add(chapterMusic2);
+
+            foreach (MusicTrack additionalTrack in GetAllMusic()) {
+                if (!allTracks.Contains(additionalTrack)) { allTracks.Add(additionalTrack); }
+            }
+
+            if (hasBRR) { 
+                foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
+                    if (!allTracks.Contains(customTrack)) { allTracks.Add(customTrack); }
+                }
+            }
+
+            if (getInvalid) {
+                List<string> allTrackID = new List<string>(); 
+
+                foreach (MusicTrack additionalTrack in excludedTracks) {
+                    if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
+                        allTracks.Add(additionalTrack); 
+                        allTrackID.Add(TrackToSongID(additionalTrack));
+                    }
+                }
+
+                foreach (MusicTrack additionalTrack in queuedTracks) {
+                    if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
+                        allTracks.Add(additionalTrack); 
+                        allTrackID.Add(TrackToSongID(additionalTrack));
+                    }
+                }
+
+                foreach (List<MusicTrack> playlist in playlists) {
+                    foreach (MusicTrack additionalTrack in playlist) {
+                        if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
+                            allTracks.Add(additionalTrack); 
+                            allTrackID.Add(TrackToSongID(additionalTrack));
+                        }
+                    }
+                }
+            }
+
+            return allTracks;
+        }
 
         public static int CreatePlaylist() {
             playlists.Add(new List<MusicTrack>());
@@ -485,14 +637,14 @@ namespace MusicCurator
             PlaylistSaveData.Instance.AutoSave = true; // ensures PlaylistSaveData doesn't save over with empty playlists
         }
 
-        public static void LoadExclusions(bool skipCheck = false) {
+        public static void LoadExclusions() {
             excludedTracks.Clear();
             foreach (string individualID in PlaylistSaveData.excludedTracksCarryOver) {
-                if (!IsInvalidTrack(FindTrackBySongID(individualID))) {
+                //if (!IsInvalidTrack(FindTrackBySongID(individualID))) {
                     excludedTracks.Add(FindTrackBySongID(individualID));
-                }
+                //}
             }
-            if (!skipCheck) { CheckIfAllExcluded(); }
+            //if (!skipCheck) { CheckIfAllExcluded(); }
         }
 
         public static void SavePlaylists(bool skipClear = false) {
@@ -514,7 +666,7 @@ namespace MusicCurator
         }
 
         public static void SaveExclusions() {
-            PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
+            //PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
 
             foreach (MusicTrack blocklisted in excludedTracks) {
                 if (!PlaylistSaveData.excludedTracksCarryOver.Contains(TrackToSongID(blocklisted))) {
@@ -552,13 +704,18 @@ namespace MusicCurator
         }
 
         public static bool PlaylistAllExcludedTracks(int playlistIndex) {
+            if (AllUnlockedTracksExcluded()) { return true; }
+
             if (playlistIndex < 0 || playlistIndex > playlists.Count) {
                 Log.LogError("Playlist " + playlistIndex + " outside range!");
                 return false;
             }
+
             List<MusicTrack> playlist = playlists[playlistIndex];
             foreach (MusicTrack track in playlist) {
-                if (!excludedTracks.Contains(track)) { return false; }
+                if (!IsInvalidTrack(track)) {
+                    if (!TrackIsExcluded(track)) { return false; }
+                }
             } return true;
         }
 
@@ -573,16 +730,22 @@ namespace MusicCurator
             } return false;
         }
 
-        public static void CheckIfAllExcluded() {
-            if (GetAllMusic().Any() && excludedTracks.Any()) {
-                foreach (MusicTrack music in GetAllMusic()) {
-                    if (!excludedTracks.Contains(music)) { return; }
-                }
-                Log.LogError("Attempted to blocklist literally every track! Why??? Blocklist cleared");
-                excludedTracks.Clear(); 
-                PlaylistSaveData.excludedTracksCarryOver = PlaylistSaveData.defaultExclusions;
-                LoadExclusions(true);
-            }
+        public static bool AllUnlockedTracksExcluded() {
+            if (!GetAllUnlockedMusic().Any()) { return true; }
+            else if (!excludedTracks.Any()) { return false; }
+            foreach (MusicTrack music in GetAllUnlockedMusic()) { if (!TrackIsExcluded(music)) { return false; } }
+            return true;
+        }
+
+        public static bool AllAvailableTracksExcluded() {
+            if (!GetAllMusic().Any()) { return true; }
+            else if (!excludedTracks.Any()) { return false; }
+            foreach (MusicTrack music in GetAllMusic()) { if (!TrackIsExcluded(music)) { return false; } }
+            return true;
+        }
+
+        public static bool TrackIsExcluded(MusicTrack checkTrack) {
+            return excludedTracks.Contains(checkTrack) || PlaylistSaveData.excludedTracksCarryOver.Contains(TrackToSongID(checkTrack)); 
         }
     }
 }
