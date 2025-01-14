@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.2.0")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.2.1")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -159,14 +159,18 @@ namespace MusicCurator
                 }
             }
 
-            if (MCSettings.strictBlocklist.Value) {
+            if (MCSettings.strictBlocklist.Value && player != null) {
                 if (musicPlayer.IsPlaying && GetAllUnlockedMusic().Count > 1 && !MusicCuratorPlugin.AllUnlockedTracksExcluded() && MusicCuratorPlugin.TrackIsExcluded(musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex))) {
                     MusicCuratorPlugin.SkipCurrentTrack();
                 } /*else if (MusicCuratorPlugin.AllUnlockedTracksExcluded() && !musicPlayer.isPlaying) { musicPlayer.ForcePaused(); }*/
 
                 List<AudioClip> excludedAudioClips = new List<AudioClip>(); 
-                foreach (MusicTrack excludedTrack in excludedTracks) { 
-                    if (excludedTrack != null && excludedTrack.AudioClip != null) { excludedAudioClips.Add(excludedTrack.AudioClip); }
+                foreach (MusicTrack gameTrack in GetAllMusicIncludingLocked()) {
+                    if (gameTrack != null && gameTrack.AudioClip != null) { 
+                        if (TrackIsExcluded(gameTrack)) { 
+                            excludedAudioClips.Add(gameTrack.AudioClip); 
+                        }
+                    }
                 }
 
                 List<AudioSource> audioSources = new List<AudioSource> {Core.Instance.musicBlendingAudioSource, Core.Instance.musicAudioSource};
@@ -177,7 +181,7 @@ namespace MusicCurator
                     src.mute = excludedAudioClips.Contains(src.clip); 
                 } }
                 
-            } else if (!MCSettings.unlockEncounterMusic.Value) {
+            } else if (!MCSettings.unlockEncounterMusic.Value && !MCSettings.strictBlocklist.Value) {
                 if (musicPlayer.IsPlaying) {
                     if (MusicCuratorPlugin.AllAvailableTracksExcluded()) {
                         if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
@@ -406,7 +410,6 @@ namespace MusicCurator
         public static List<MusicTrack> GetAllUnlockedMusic() { 
             if (player == null) { return GetAllMusic(); }
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
-			Story.ObjectiveInfo currentObjectiveInfo = Story.GetCurrentObjectiveInfo();
 			
             MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
             MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
@@ -442,7 +445,6 @@ namespace MusicCurator
         /* all music tracks in the game */
         public static List<MusicTrack> GetAllMusicIncludingLocked(bool getInvalid = false) {
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
-			Story.ObjectiveInfo currentObjectiveInfo = Story.GetCurrentObjectiveInfo();
 			
             MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
 			allTracks.Add(musicTrackByID);
