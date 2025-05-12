@@ -14,10 +14,6 @@
 - **Quick shuffle toggle**: Press Select (Left Bracket) while in the music app to quickly toggle looping, shuffling, or looping a single track.
 - **All mixtapes everywhere**: The Hideout mixtape is now avaliable to play in every stage, and the "Locking Up the Funk" mixtape is avaliable in the Hideout. 
 - Rebindable controls and plenty of configuration options!
-## Installation
-- If installing using r2modman, click "Install with Mod Manager"
-- If installing manually, extract the .zip and drop the mod files into your \BepInEx\plugins\ folder
-	- Make sure that the "MC-LoopSingle.png" and "MC-PlaylistIcon.png" files (found in the \include\ folder) are in the same location as the MusicCurator.dll file!
 ## Building from Source
 This plugin requires the following .dlls to be placed in the \lib\ folder to be built:
 - A [publicized](https://github.com/CabbageCrow/AssemblyPublicizer) version of the game's code, from BRC's Data folder (Assembly-CSharp.dll)
@@ -28,7 +24,7 @@ This plugin requires the following .dlls to be placed in the \lib\ folder to be 
    - UnityEngine.UI.dll
    - Unity.TextMeshPro.dll
 
-With these files, run "dotnet build" in the project's root folder (same directory as MusicCurator.csproj) and the .dll will be in the \bin\ folder. 
+With these files, run "dotnet build" in the project's root folder (same directory as MusicCurator.csproj) and the .dll will be in the \bin\ folder. To run the build, ensure the files/folders in /include/ are placed in the same location as the .dll file.  
 
 ## Credits
 Huge thanks to:
