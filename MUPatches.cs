@@ -5,6 +5,7 @@ using HarmonyLib;
 using Reptile;
 using Reptile.Phone;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System;
 using System.Collections;
@@ -22,6 +23,50 @@ namespace MusicCurator {
             MusicCuratorPlugin.selectedPlaylist = -1;
             MusicCuratorPlugin.appSelectedTrack = -1;
         } 
+
+        /*[HarmonyPostfix]
+        [HarmonyPatch(nameof(Reptile.Phone.Phone.PhoneInit))]
+        public static void TrackLabelFont() {
+            MusicCuratorPlugin.Log.LogInfo("track label app font get eget eget getg getg get");
+            GameplayUIPatches.trackLabel.SetText("hiiiii212121 MusicCurator Playlists");
+        }*/
+    }
+
+    [HarmonyPatch(typeof(Reptile.GameplayUI))]
+    internal class GameplayUIPatches {
+        public static TextMeshProUGUI trackLabel;
+        public static RectTransform trackLogo;
+        public static Image trackLogoImage;
+        
+        [HarmonyPostfix]
+        [HarmonyPatch(nameof(Reptile.GameplayUI.Init))]
+        public static void SetupMusicLabel(GameplayUI __instance) { 
+            MusicCuratorPlugin.gameplayUI = __instance;
+            trackLabel = UnityEngine.Object.Instantiate(__instance.tricksInComboLabel, __instance.tricksInComboLabel.transform.parent);
+            trackLabel.transform.localPosition = __instance.tricksInComboLabel.transform.localPosition;
+            trackLabel.transform.localPosition -= new Vector3(MCSettings.musicPosX.Value, MCSettings.musicPosY.Value, 0f);
+            trackLabel.alignment = TextAlignmentOptions.Left;
+
+            //var spriteObject = UnityEngine.Object.Instantiate(__instance.tricksInComboLabel, __instance.tricksInComboLabel.transform.parent).gameObject;
+            //var spriteRenderer = trackLabel.gameObject.AddComponent<SpriteRenderer>();
+            //spriteRenderer.sprite = CommonAPI.TextureUtility.LoadSprite(Path.Combine(MusicCuratorPlugin.Instance.Directory, "MC-Note.png"));
+            
+            //spriteObject.transform.localPosition = trackLabel.transform.localPosition;
+            //spriteObject.transform.localPosition -= Vector3.right * 64.0f;
+            GameObject imgObject = new GameObject("Track Icon");
+
+            RectTransform trans = imgObject.AddComponent<RectTransform>();
+            trans.transform.SetParent(trackLabel.transform); // setting parent
+            trans.localScale = Vector3.one;
+            trans.anchoredPosition = new Vector2(0f, 0f); // setting position, will be on center
+            trans.sizeDelta = new Vector2(32f, 32f); // custom size
+            trackLogo = trans;
+
+            Image image = imgObject.AddComponent<Image>();
+            image.sprite = CommonAPI.TextureUtility.LoadSprite(Path.Combine(MusicCuratorPlugin.Instance.Directory, "MC-Note.png"));
+            imgObject.transform.SetParent(trackLabel.transform);
+            trackLogoImage = image;
+        }
     }
 
     [HarmonyPatch(typeof(MusicPlayer))]

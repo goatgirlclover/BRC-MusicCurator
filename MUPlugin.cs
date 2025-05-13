@@ -72,6 +72,10 @@ namespace MusicCurator
 
         public const string songIDSymbol = "♫"; // v0.1.0 = "-", v0.1.1 = "♫"
 
+        public static GameplayUI gameplayUI;
+        public static float timeOnSameTrack;
+        public static MusicTrack trackOnPreviousFrame;
+
         private void Awake()
         {
             Instance = this;
@@ -244,6 +248,11 @@ namespace MusicCurator
                     //return;
                 //}
             }
+
+            if (player != null && player.phone != null && musicPlayer.isPlaying) {
+                UpdateTrackPopup();
+            }
+            
         }
 
         public static void SkipCurrentTrack() {
@@ -257,6 +266,35 @@ namespace MusicCurator
             }
             skipping = false;
             previousTrack = null;
+        }
+
+        public static void UpdateTrackPopup() {
+            if (CommonAPI.Phone.AppUtility.GetAppFont() != GameplayUIPatches.trackLabel.font) {
+                GameplayUIPatches.trackLabel.font = CommonAPI.Phone.AppUtility.GetAppFont();
+
+                var _outlineMaterial = GameplayUIPatches.trackLabel.fontMaterial;
+                _outlineMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+                _outlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
+                GameplayUIPatches.trackLabel.fontMaterial = _outlineMaterial;
+            }
+
+            GameplayUIPatches.trackLabel.transform.position = new Vector3(gameplayUI.wanted1.position.x - MCSettings.musicPosX.Value, gameplayUI.trickNameLabel.transform.position.y - MCSettings.musicPosY.Value, 0f);
+            GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(MCSettings.musicSX.Value, MCSettings.musicSY.Value);
+            GameplayUIPatches.trackLogo.transform.localPosition = new Vector3 ( MCSettings.imgPosX.Value, MCSettings.imgPosY.Value, 0f);
+            GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, MCSettings.outlineWidth.Value);
+
+            
+            MusicTrack currentMusicTrack = musicPlayer.musicTrackQueue.CurrentMusicTrack;
+            GameplayUIPatches.trackLabel.SetText(currentMusicTrack.Title + " - " + currentMusicTrack.Artist);
+            if (trackOnPreviousFrame != currentMusicTrack) { timeOnSameTrack = -6f; }
+            else { timeOnSameTrack += Time.deltaTime*2f; }
+            trackOnPreviousFrame = currentMusicTrack;
+
+            float timeOpacity = timeOnSameTrack < 0f ? 1.0f : 0.0f; //1.0f - Mathf.Clamp01(timeOnSameTrack);
+            float speed = 0.2f*(Time.deltaTime*60f);
+            GameplayUIPatches.trackLabel.faceColor = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
+            GameplayUIPatches.trackLabel.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0f, 0f, 0f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed)));
+            GameplayUIPatches.trackLogoImage.color = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
         }
 
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {
