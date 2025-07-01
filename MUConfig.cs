@@ -39,14 +39,6 @@ namespace MusicCurator
         public static ConfigEntry<bool> unlockEncounterMusic;
         public static ConfigEntry<bool> unlockPhone;
 
-        public static ConfigEntry<float> musicPosX;
-        public static ConfigEntry<float> musicPosY;
-        public static ConfigEntry<float> musicSX;
-        public static ConfigEntry<float> musicSY;
-        public static ConfigEntry<float> imgPosX;
-        public static ConfigEntry<float> imgPosY;
-        public static ConfigEntry<float> outlineWidth;
-
         public static void BindSettings(ConfigFile Config) {
             customPlaylistNamesUnsplit = Config.Bind(
                 "1. Settings",          // The section under which the option is shown
@@ -92,14 +84,6 @@ namespace MusicCurator
             keybindsQueueUnsplit.SettingChanged += UpdateSettingsEvent;
             keybindsShuffleUnsplit.SettingChanged += UpdateSettingsEvent;
             keybindsPauseUnsplit.SettingChanged += UpdateSettingsEvent;
-
-            musicPosX = Config.Bind("3. Debug", "music pos x", 0f, "debug");
-            musicPosY = Config.Bind("3. Debug", "music pos y", 0f, "debug");
-            musicSX = Config.Bind("3. Debug", "music Sx", 0f, "debug");
-            musicSY = Config.Bind("3. Debug", "music Sy", 0f, "debug");
-            imgPosX = Config.Bind("3. Debug", "img pos x", 0f, "debug");
-            imgPosY = Config.Bind("3. Debug", "img pos y", 0f, "debug");
-            outlineWidth = Config.Bind("3. Debug", "outline", 0f, "debug");
         }
 
         public static void UpdateSettingsEvent(object sender, EventArgs args) {

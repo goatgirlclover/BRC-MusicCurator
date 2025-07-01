@@ -23,13 +23,6 @@ namespace MusicCurator {
             MusicCuratorPlugin.selectedPlaylist = -1;
             MusicCuratorPlugin.appSelectedTrack = -1;
         } 
-
-        /*[HarmonyPostfix]
-        [HarmonyPatch(nameof(Reptile.Phone.Phone.PhoneInit))]
-        public static void TrackLabelFont() {
-            MusicCuratorPlugin.Log.LogInfo("track label app font get eget eget getg getg get");
-            GameplayUIPatches.trackLabel.SetText("hiiiii212121 MusicCurator Playlists");
-        }*/
     }
 
     [HarmonyPatch(typeof(Reptile.GameplayUI))]
@@ -44,17 +37,10 @@ namespace MusicCurator {
             MusicCuratorPlugin.gameplayUI = __instance;
             trackLabel = UnityEngine.Object.Instantiate(__instance.tricksInComboLabel, __instance.tricksInComboLabel.transform.parent);
             trackLabel.transform.localPosition = __instance.tricksInComboLabel.transform.localPosition;
-            trackLabel.transform.localPosition -= new Vector3(MCSettings.musicPosX.Value, MCSettings.musicPosY.Value, 0f);
+            trackLabel.transform.localPosition -= new Vector3(0, 20.0f*((float)Screen.height/1600.0f), 0f);
             trackLabel.alignment = TextAlignmentOptions.Left;
 
-            //var spriteObject = UnityEngine.Object.Instantiate(__instance.tricksInComboLabel, __instance.tricksInComboLabel.transform.parent).gameObject;
-            //var spriteRenderer = trackLabel.gameObject.AddComponent<SpriteRenderer>();
-            //spriteRenderer.sprite = CommonAPI.TextureUtility.LoadSprite(Path.Combine(MusicCuratorPlugin.Instance.Directory, "MC-Note.png"));
-            
-            //spriteObject.transform.localPosition = trackLabel.transform.localPosition;
-            //spriteObject.transform.localPosition -= Vector3.right * 64.0f;
             GameObject imgObject = new GameObject("Track Icon");
-
             RectTransform trans = imgObject.AddComponent<RectTransform>();
             trans.transform.SetParent(trackLabel.transform); // setting parent
             trans.localScale = Vector3.one;
@@ -79,7 +65,6 @@ namespace MusicCurator {
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(MusicPlayer.PlayNext))]
-        //[HarmonyPriority(Priority.Low)] //[HarmonyAfter(["com.dragsun.Shufleify"])] 
         public static void PlayNextPostfix_OverrideNextTrack(MusicPlayer __instance) {
             // all tracks excluded 
             if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {

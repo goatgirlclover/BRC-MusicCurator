@@ -281,23 +281,16 @@ namespace MusicCurator
                 _outlineMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
                 _outlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
                 GameplayUIPatches.trackLabel.fontMaterial = _outlineMaterial;
+
+                float screenRatio = (float)Screen.height/1600.0f;
+                float posY = 20.0f*screenRatio;
+                GameplayUIPatches.trackLabel.transform.position = new Vector3(gameplayUI.wanted1.position.x, gameplayUI.trickNameLabel.transform.position.y - posY, 0f);
+                GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(500f, 40f);
+                GameplayUIPatches.trackLogo.transform.localPosition = new Vector3(-30f, -20f, 0f);
+                GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.175f);
             }
 
             timeOnSameTrack += Time.deltaTime; 
-
-            float screenRatio = (float)Screen.height/1600.0f;
-            float posX = MCSettings.musicPosX.Value*screenRatio;
-            float posY = MCSettings.musicPosY.Value*screenRatio;
-            float sX = MCSettings.musicSX.Value;
-            float sY = MCSettings.musicSY.Value;
-            float imgPosX = MCSettings.imgPosX.Value;
-            float imgPosY = MCSettings.imgPosY.Value;
-            float outlineWidth = MCSettings.outlineWidth.Value;
-
-            GameplayUIPatches.trackLabel.transform.position = new Vector3(gameplayUI.wanted1.position.x - posX, gameplayUI.trickNameLabel.transform.position.y - posY, 0f);
-            GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(sX, sY);
-            GameplayUIPatches.trackLogo.transform.localPosition = new Vector3 (imgPosX, imgPosY, 0f);
-            GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, outlineWidth);
 
             float timeOpacity = player.phone.IsOn ? 0.0f : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
             float speed = 0.2f*(Time.deltaTime*60f);
