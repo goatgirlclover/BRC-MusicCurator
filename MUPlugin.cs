@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.2.2")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.0.0")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -71,6 +71,10 @@ namespace MusicCurator
         public static int pausedTrack; 
 
         public const string songIDSymbol = "♫"; // v0.1.0 = "-", v0.1.1 = "♫"
+
+        public static GameplayUI gameplayUI;
+        public static float timeOnSameTrack = 0f;
+        private int trackInstanceId = -1;
 
         private void Awake()
         {
@@ -156,6 +160,11 @@ namespace MusicCurator
                     if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
                         musicPlayer.ForcePaused();
                     }
+                }
+
+                if (player != null && musicPlayer.CurrentTrackTime > 0.2f && musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex).GetInstanceID() != trackInstanceId) { 
+                    SetTrackPopupText(musicPlayer.musicTrackQueue.CurrentMusicTrack.Artist + " - " + musicPlayer.musicTrackQueue.CurrentMusicTrack.Title);
+                    trackInstanceId = musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex).GetInstanceID();
                 }
             }
 
@@ -244,6 +253,11 @@ namespace MusicCurator
                     //return;
                 //}
             }
+
+            if (player != null && player.phone != null) {
+                UpdateTrackPopup();
+            }
+            
         }
 
         public static void SkipCurrentTrack() {
@@ -257,6 +271,38 @@ namespace MusicCurator
             }
             skipping = false;
             previousTrack = null;
+        }
+
+        public static void UpdateTrackPopup() {
+            if (CommonAPI.Phone.AppUtility.GetAppFont() != GameplayUIPatches.trackLabel.font) {
+                GameplayUIPatches.trackLabel.font = CommonAPI.Phone.AppUtility.GetAppFont();
+
+                var _outlineMaterial = GameplayUIPatches.trackLabel.fontMaterial;
+                _outlineMaterial.EnableKeyword(ShaderUtilities.Keyword_Outline);
+                _outlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
+                GameplayUIPatches.trackLabel.fontMaterial = _outlineMaterial;
+
+                float screenRatio = (float)Screen.height/1600.0f;
+                float posY = 20.0f*screenRatio;
+                GameplayUIPatches.trackLabel.transform.position = new Vector3(gameplayUI.wanted1.position.x, gameplayUI.trickNameLabel.transform.position.y - posY, 0f);
+                GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(500f, 40f);
+                GameplayUIPatches.trackLogo.transform.localPosition = new Vector3(-30f, -20f, 0f);
+                GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.175f);
+            }
+
+            timeOnSameTrack += Time.deltaTime; 
+
+            float timeOpacity = player.phone.IsOn ? 0.0f : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
+            float speed = 0.2f*(Time.deltaTime*60f);
+
+            GameplayUIPatches.trackLabel.faceColor = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
+            GameplayUIPatches.trackLabel.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0f, 0f, 0f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed)));
+            GameplayUIPatches.trackLogoImage.color = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
+        }
+
+        public static void SetTrackPopupText(string text) {
+            GameplayUIPatches.trackLabel.SetText(text);
+            timeOnSameTrack = 0f;
         }
 
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {
