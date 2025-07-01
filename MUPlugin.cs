@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "0.2.2")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.0.0")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -73,8 +73,8 @@ namespace MusicCurator
         public const string songIDSymbol = "♫"; // v0.1.0 = "-", v0.1.1 = "♫"
 
         public static GameplayUI gameplayUI;
-        public static float timeOnSameTrack;
-        public static MusicTrack trackOnPreviousFrame;
+        public static float timeOnSameTrack = 0f;
+        private int trackInstanceId = -1;
 
         private void Awake()
         {
@@ -160,6 +160,11 @@ namespace MusicCurator
                     if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
                         musicPlayer.ForcePaused();
                     }
+                }
+
+                if (player != null && musicPlayer.CurrentTrackTime > 0.2f && musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex).GetInstanceID() != trackInstanceId) { 
+                    SetTrackPopupText(musicPlayer.musicTrackQueue.CurrentMusicTrack.Artist + " - " + musicPlayer.musicTrackQueue.CurrentMusicTrack.Title);
+                    trackInstanceId = musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex).GetInstanceID();
                 }
             }
 
@@ -249,7 +254,7 @@ namespace MusicCurator
                 //}
             }
 
-            if (player != null && player.phone != null && musicPlayer.isPlaying) {
+            if (player != null && player.phone != null) {
                 UpdateTrackPopup();
             }
             
@@ -278,23 +283,33 @@ namespace MusicCurator
                 GameplayUIPatches.trackLabel.fontMaterial = _outlineMaterial;
             }
 
-            GameplayUIPatches.trackLabel.transform.position = new Vector3(gameplayUI.wanted1.position.x - MCSettings.musicPosX.Value, gameplayUI.trickNameLabel.transform.position.y - MCSettings.musicPosY.Value, 0f);
-            GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(MCSettings.musicSX.Value, MCSettings.musicSY.Value);
-            GameplayUIPatches.trackLogo.transform.localPosition = new Vector3 ( MCSettings.imgPosX.Value, MCSettings.imgPosY.Value, 0f);
-            GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, MCSettings.outlineWidth.Value);
+            timeOnSameTrack += Time.deltaTime; 
 
-            
-            MusicTrack currentMusicTrack = musicPlayer.musicTrackQueue.CurrentMusicTrack;
-            GameplayUIPatches.trackLabel.SetText(currentMusicTrack.Title + " - " + currentMusicTrack.Artist);
-            if (trackOnPreviousFrame != currentMusicTrack) { timeOnSameTrack = -6f; }
-            else { timeOnSameTrack += Time.deltaTime*2f; }
-            trackOnPreviousFrame = currentMusicTrack;
+            float screenRatio = (float)Screen.height/1600.0f;
+            float posX = MCSettings.musicPosX.Value*screenRatio;
+            float posY = MCSettings.musicPosY.Value*screenRatio;
+            float sX = MCSettings.musicSX.Value;
+            float sY = MCSettings.musicSY.Value;
+            float imgPosX = MCSettings.imgPosX.Value;
+            float imgPosY = MCSettings.imgPosY.Value;
+            float outlineWidth = MCSettings.outlineWidth.Value;
 
-            float timeOpacity = timeOnSameTrack < 0f ? 1.0f : 0.0f; //1.0f - Mathf.Clamp01(timeOnSameTrack);
+            GameplayUIPatches.trackLabel.transform.position = new Vector3(gameplayUI.wanted1.position.x - posX, gameplayUI.trickNameLabel.transform.position.y - posY, 0f);
+            GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(sX, sY);
+            GameplayUIPatches.trackLogo.transform.localPosition = new Vector3 (imgPosX, imgPosY, 0f);
+            GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, outlineWidth);
+
+            float timeOpacity = player.phone.IsOn ? 0.0f : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
             float speed = 0.2f*(Time.deltaTime*60f);
+
             GameplayUIPatches.trackLabel.faceColor = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
             GameplayUIPatches.trackLabel.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0f, 0f, 0f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed)));
             GameplayUIPatches.trackLogoImage.color = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
+        }
+
+        public static void SetTrackPopupText(string text) {
+            GameplayUIPatches.trackLabel.SetText(text);
+            timeOnSameTrack = 0f;
         }
 
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {

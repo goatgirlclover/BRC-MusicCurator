@@ -272,7 +272,7 @@ namespace MusicCurator {
                 newLabel.margin = new Vector4 (0,0,0,0);
                 newLabel.alignment = TextAlignmentOptions.Center;
                 newLabel.text = "";
-                newLabel.fontSize *= 2f;
+                //newLabel.fontSize *= 2f;
                 newLabel.transform.position = __instance.m_Disc.transform.position;
             }
         }
