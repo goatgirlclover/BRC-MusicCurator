@@ -245,9 +245,7 @@ namespace MusicCurator {
     [HarmonyPatch(typeof(MusicPlayerTrackButton))]
     internal class TrackButtonPatches {
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(MusicPlayerTrackButton.OnSelect))]
-        [HarmonyPatch(nameof(MusicPlayerTrackButton.OnDeselect))]
-        [HarmonyPatch(nameof(MusicPlayerTrackButton.SetMusicApp))]
+        [HarmonyPatch(nameof(MusicPlayerTrackButton.ConstantUpdate))]
         public static void ColorUpdatePostfix(MusicPlayerTrackButton __instance) {
             if (!__instance.IsHidden) { 
                 MusicCuratorPlugin.UpdateButtonColor(__instance); 
