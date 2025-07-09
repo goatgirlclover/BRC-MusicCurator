@@ -72,6 +72,13 @@ namespace MusicCurator
 
         public const string songIDSymbol = "♫"; // v0.1.0 = "-", v0.1.1 = "♫"
 
+        public static List<TrackInfo> allMusicCache = new List<TrackInfo>();
+        public class TrackInfo {
+            public MusicTrack MusicTrack;
+            public bool Valid = true;
+            public bool OnlyIfAllMixtapes = false; 
+        }
+
         private void Awake()
         {
             Instance = this;
@@ -401,34 +408,17 @@ namespace MusicCurator
         public static List<MusicTrack> GetAllUnlockedMusic() { 
             if (player == null) { return GetAllMusic(); }
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
+
+            if (allMusicCache.Count < 1) { _=GetAllMusicIncludingLocked(); }
+
+            foreach (TrackInfo info in allMusicCache) {
+                if (info.Valid && Core.Instance.Platform.User.GetUnlockableSaveDataFor(info.MusicTrack).IsUnlocked) { 
+                    if (!info.OnlyIfAllMixtapes || MCSettings.allMixtapes.Value) { allTracks.Add(info.MusicTrack); }
+                }
+            }
 			
-            MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
-            MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
-            if (MCSettings.allMixtapes.Value) { allTracks.Add(chapterMusic2); }
-			if (MCSettings.allMixtapes.Value || Core.Instance.BaseModule.CurrentStage == Stage.hideout) { allTracks.Add(musicTrackByID); }
-            
             MusicTrack chapterMusic3 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.GetCurrentObjectiveInfo().chapter);
             if (!allTracks.Contains(chapterMusic3)) { allTracks.Add(chapterMusic3); }
-
-			AUnlockable[] unlockables = player.phone.GetAppInstance<AppMusicPlayer>().Unlockables;
-			for (int i = 0; i < unlockables.Length; i++)
-			{
-				MusicTrack musicTrack = unlockables[i] as MusicTrack;
-                if (Core.Instance.Platform.User.GetUnlockableSaveDataFor(musicTrack).IsUnlocked) {
-                    musicTrack.isRepeatable = false;
-                    if (!allTracks.Contains(musicTrack)) { allTracks.Add(musicTrack); }
-                }
-			}
-
-            foreach (MusicTrack additionalTrack in GetAllMusic()) {
-                if (!allTracks.Contains(additionalTrack)) { allTracks.Add(additionalTrack); }
-            }
-
-            if (hasBRR) { 
-                foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
-                    if (!allTracks.Contains(customTrack)) { allTracks.Add(customTrack); }
-                }
-            }
 
             return allTracks;
         }
@@ -436,9 +426,19 @@ namespace MusicCurator
         /* all music tracks in the game */
         public static List<MusicTrack> GetAllMusicIncludingLocked(bool getInvalid = false) {
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
-			
+
+            if (allMusicCache.Count > 0) { 
+                foreach (TrackInfo info in allMusicCache) {
+                    if (getInvalid || info.Valid) { allTracks.Add(info.MusicTrack); }
+                }
+                return allTracks; 
+            }
+
+            List<TrackInfo> allTracksInfo = new List<TrackInfo>(); 
+            		
             MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
 			allTracks.Add(musicTrackByID);
+            allTracksInfo.Add(new TrackInfo { MusicTrack = musicTrackByID, OnlyIfAllMixtapes = true });
 
 			AUnlockable[] unlockables = player.phone.GetAppInstance<AppMusicPlayer>().Unlockables;
 			for (int i = 0; i < unlockables.Length; i++)
@@ -446,18 +446,26 @@ namespace MusicCurator
 				MusicTrack musicTrack = unlockables[i] as MusicTrack;
                 musicTrack.isRepeatable = false;
                 allTracks.Add(musicTrack);
+                allTracksInfo.Add(new TrackInfo { MusicTrack = musicTrack });
 			}
 
             MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
             allTracks.Add(chapterMusic2);
+            allTracksInfo.Add(new TrackInfo { MusicTrack = chapterMusic2, OnlyIfAllMixtapes = true });
 
             foreach (MusicTrack additionalTrack in GetAllMusic()) {
-                if (!allTracks.Contains(additionalTrack)) { allTracks.Add(additionalTrack); }
+                if (!allTracks.Contains(additionalTrack)) { 
+                    allTracks.Add(additionalTrack); 
+                    allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack });
+                }
             }
 
             if (hasBRR) { 
                 foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
-                    if (!allTracks.Contains(customTrack)) { allTracks.Add(customTrack); }
+                    if (!allTracks.Contains(customTrack)) { 
+                        allTracks.Add(customTrack); 
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = customTrack });
+                    }
                 }
             }
 
@@ -468,6 +476,7 @@ namespace MusicCurator
                     if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
                         allTracks.Add(additionalTrack); 
                         allTrackID.Add(TrackToSongID(additionalTrack));
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack, Valid = false });
                     }
                 }
 
@@ -475,6 +484,7 @@ namespace MusicCurator
                     if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
                         allTracks.Add(additionalTrack); 
                         allTrackID.Add(TrackToSongID(additionalTrack));
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack, Valid = false });
                     }
                 }
 
@@ -483,11 +493,13 @@ namespace MusicCurator
                         if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
                             allTracks.Add(additionalTrack); 
                             allTrackID.Add(TrackToSongID(additionalTrack));
+                            allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack, Valid = false });
                         }
                     }
                 }
             }
 
+            allMusicCache = allTracksInfo; 
             return allTracks;
         }
 
