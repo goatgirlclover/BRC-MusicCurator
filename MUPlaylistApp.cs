@@ -613,7 +613,7 @@ namespace MusicCurator
                 if (!addingToQueue && !addingToBlocklist && !creatingPlaylist) {
                     if (MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(mpTrack)) { continue; }
                 } else if (addingToQueue || addingToBlocklist) {
-                    selectedTracksToAddToPlaylist = addingToBlocklist ? MusicCuratorPlugin.excludedTracks : MusicCuratorPlugin.queuedTracks;
+                    selectedTracksToAddToPlaylist.AddRange(addingToBlocklist ? MusicCuratorPlugin.excludedTracks : MusicCuratorPlugin.queuedTracks);
                 }
                 
                 MusicCuratorPlugin.Log.LogInfo("Tracklist App: Adding " + mpTrack.Artist + " - " + mpTrack.Title);
@@ -647,20 +647,20 @@ namespace MusicCurator
             ScrollView.ScrollUp();
         }
 
-        public override void OnAppDisable()
-        {
-            ScrollView.RemoveAllButtons();
-            base.OnAppDisable();
-        }
-
-        public override void OnReleaseLeft() 
+        public override void OnAppDisable() 
         {
             //if (MusicCuratorPlugin.selectedPlaylist > MusicCuratorPlugin.playlists.Count - 1) {
             //    MusicCuratorPlugin.selectedPlaylist = MusicCuratorPlugin.CreatePlaylist();
             //}
 
-            if (addingToBlocklist) { MusicCuratorPlugin.excludedTracks = selectedTracksToAddToPlaylist; }
-            else if (addingToQueue) { MusicCuratorPlugin.queuedTracks = selectedTracksToAddToPlaylist; }
+            if (addingToBlocklist) { 
+                MusicCuratorPlugin.excludedTracks.Clear();
+                MusicCuratorPlugin.excludedTracks.AddRange(selectedTracksToAddToPlaylist); 
+            }
+            else if (addingToQueue) { 
+                MusicCuratorPlugin.queuedTracks.Clear();
+                MusicCuratorPlugin.queuedTracks.AddRange(selectedTracksToAddToPlaylist); 
+            } 
             else {
                 foreach (MusicTrack trackToAddToPlaylist in selectedTracksToAddToPlaylist) {
                     if (!MusicCuratorPlugin.playlists[MusicCuratorPlugin.selectedPlaylist].Contains(trackToAddToPlaylist)) { 
@@ -670,21 +670,19 @@ namespace MusicCurator
             }
             
             MusicCuratorPlugin.SavePlaylists(); // add this method
-            MusicCuratorPlugin.ReorderPlaylistInQueue(MusicCuratorPlugin.musicPlayer.shuffle);
+            if (addingToBlocklist) { MusicCuratorPlugin.ReorderPlaylistInQueue(MusicCuratorPlugin.musicPlayer.shuffle); }
 
             creatingPlaylist = false;
             addingToBlocklist = false;
             addingToQueue = false;
             selectedTracksToAddToPlaylist.Clear();
             
-            if (creatingPlaylist) {
-                creatingPlaylist = false;
-                MyPhone.OpenApp(typeof(AppPlaylists));
-            } else if (addingToBlocklist || addingToQueue) {
+            if (addingToBlocklist || addingToQueue || creatingPlaylist) {
                 MyPhone.OpenApp(typeof(AppPlaylists)); // base.OnReleaseLeft();
             } else {
-                base.OnReleaseLeft();
+                base.OnAppDisable();
             }
+            ScrollView.RemoveAllButtons();
         }
 
         public override void OnAppInit()

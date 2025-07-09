@@ -87,7 +87,10 @@ namespace MusicCurator {
             else if (MusicCuratorPlugin.queuedTracks.Any()) { 
                 MusicTrack nextTrack = MusicCuratorPlugin.queuedTracks[0];
                 MusicCuratorPlugin.PlayTrack(nextTrack);
-                MusicCuratorPlugin.queuedTracks.RemoveAt(0);
+
+                if (MusicCuratorPlugin.queuedTracks.Count > 1) {
+                    MusicCuratorPlugin.queuedTracks.RemoveAt(0);
+                } else { MusicCuratorPlugin.queuedTracks.Clear(); }
             } 
 
             // has playlist tracks
