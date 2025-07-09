@@ -77,13 +77,19 @@ namespace MusicCurator
         private int trackInstanceId = -1;
         public static string currentPopupText = "";
 
+        public static List<TrackInfo> allMusicCache = new List<TrackInfo>();
+        public class TrackInfo {
+            public MusicTrack MusicTrack;
+            public bool Valid = true;
+            public bool OnlyIfAllMixtapes = false; 
+        }
+
         private void Awake()
         {
             Instance = this;
             MusicCuratorPlugin.Log = base.Logger; // i don't remember why we do this this way
             Harmony.PatchAll(); 
             Logger.LogInfo($"Plugin MusicCurator is loaded!");
-            //Logger.LogInfo($"Keep in mind MusicCurator has not been extensively tested just yet. Watch out for bugs!");
 
             MCSettings.BindSettings(Config);
             MCSettings.UpdateSettings();      
@@ -99,7 +105,6 @@ namespace MusicCurator
                     AppDeletePlaylist.Initialize();
                 AppManageQueueAndExclusions.Initialize();
                     AppDeleteAllPlaylists.Initialize(); // TODO: condense into AppConfirm
-            // SO MANY APPS!!!!!
 
             loopingSingleTrackSprite = CommonAPI.TextureUtility.LoadSprite(Path.Combine(MusicCuratorPlugin.Instance.Directory, "MC-LoopSingle.png")); // same place as plugin dll - keep in mind for thunderstore
             loopingSingleTrackSprite.texture.filterMode = FilterMode.Point;
@@ -227,7 +232,7 @@ namespace MusicCurator
                 SetAppShuffle(!musicPlayer.shuffle);
             }
 
-            if (PlayerUsingMusicApp()) {
+            if (MCSettings.enableMusicAppChanges.Value && PlayerUsingMusicApp()) {
                 MusicPlayerTrackButton mptb = (player.phone.AppInstances["AppMusicPlayer"] as AppMusicPlayer).m_TrackList.SelectedButtton as MusicPlayerTrackButton;
                 MusicTrack selectedTrack = mptb.AssignedContent as MusicTrack;
 
@@ -321,41 +326,34 @@ namespace MusicCurator
             //    }
             //}
 
-            TextMeshProUGUI queuePosLabel = button.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
-            if (queuePosLabel != null && queuePosLabel != button.m_TitleLabel) {
-                if (queuePosLabel.text == "") { // initial setup - can't add an outline on label creation or game hard crashes
-                    queuePosLabel.outlineWidth = 0.4f;
-                    queuePosLabel.outlineColor = button.m_ArtistColorNormal;
-                    queuePosLabel.fontSharedMaterial.SetFloat(ShaderUtilities.ID_FaceDilate,0.4f);
-                }
-                if (MusicCuratorPlugin.playlistTracks.Contains(assignedTrack) && !button.IsMyTrackPlaying()) {
-                    // queued tracks take priority over playlist tracks, so add the queued tracks count first
-                    queuePosLabel.text = (playlistTracks.IndexOf(assignedTrack) + 1 + queuedTracks.Count).ToString();
-                } else {
-                    queuePosLabel.text = (queuedTracks.IndexOf(assignedTrack) + 1).ToString();
-                    // if playing a playlist, add an asterisk to queued tracks to show they aren't part of the playlist
-                    if (playlistTracks.Any() && currentPlaylistIndex >= 0 && queuePosLabel.text != "0") { 
-                        queuePosLabel.text = queuePosLabel.text + "*"; 
+            if (MCSettings.enableMusicAppChanges.Value) {
+                TextMeshProUGUI queuePosLabel = button.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
+                if (queuePosLabel != null && queuePosLabel != button.m_TitleLabel) {
+                    if (queuePosLabel.text == "") { // initial setup - can't add an outline on label creation or game hard crashes
+                        queuePosLabel.outlineWidth = 0.4f;
+                        queuePosLabel.outlineColor = button.m_ArtistColorNormal;
+                        queuePosLabel.fontSharedMaterial.SetFloat(ShaderUtilities.ID_FaceDilate,0.4f);
                     }
+                    if (MusicCuratorPlugin.playlistTracks.Contains(assignedTrack) && !button.IsMyTrackPlaying()) {
+                        // queued tracks take priority over playlist tracks, so add the queued tracks count first
+                        queuePosLabel.text = (playlistTracks.IndexOf(assignedTrack) + 1 + queuedTracks.Count).ToString();
+                    } else {
+                        queuePosLabel.text = (queuedTracks.IndexOf(assignedTrack) + 1).ToString();
+                        // if playing a playlist, add an asterisk to queued tracks to show they aren't part of the playlist
+                        if (playlistTracks.Any() && currentPlaylistIndex >= 0 && queuePosLabel.text != "0") { 
+                            queuePosLabel.text = queuePosLabel.text + "*"; 
+                        }
+                    }
+                    // hide label if track isn't anywhere
+                    if (queuePosLabel.text == "0") { queuePosLabel.text = "   "; }
                 }
-                // hide label if track isn't anywhere
-                if (queuePosLabel.text == "0") { queuePosLabel.text = "   "; }
             }
             
             if (assignedTrack.Title != button.m_TitleLabel.text || button.IsHidden) { return; } 
 
-            //bool inPlaylist = currentPlaylistExists ? playlists[currentPlaylistIndex].Contains(assignedTrack) : false;
-            // TODO: finalize colors (can we make them nicer?)
-            // it'd also be nice to have actual icons instead of color coding everything
-        //    if (inPlaylist) {
-        //            button.m_TitleLabel.color = Color.cyan;
-        //            button.m_ArtistLabel.color = Color.cyan;
             if (TrackIsExcluded(assignedTrack)) {
                     button.m_TitleLabel.color = Color.red;
                     button.m_ArtistLabel.color = Color.red;
-        //    } else if (queuedTracks.Contains(assignedTrack)) {
-        //            button.m_TitleLabel.color = Color.magenta;
-        //            button.m_ArtistLabel.color = Color.magenta;
             } else if (button.IsSelected) {
                     button.m_TitleLabel.color = button.m_TitleColorSelected;
                     button.m_ArtistLabel.color = button.m_ArtistColorSelected;
@@ -462,34 +460,17 @@ namespace MusicCurator
         public static List<MusicTrack> GetAllUnlockedMusic() { 
             if (player == null) { return GetAllMusic(); }
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
+
+            if (allMusicCache.Count < 1) { _=GetAllMusicIncludingLocked(); }
+
+            foreach (TrackInfo info in allMusicCache) {
+                if (info.Valid && Core.Instance.Platform.User.GetUnlockableSaveDataFor(info.MusicTrack).IsUnlocked) { 
+                    if (!info.OnlyIfAllMixtapes || MCSettings.allMixtapes.Value) { allTracks.Add(info.MusicTrack); }
+                }
+            }
 			
-            MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
-            MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
-            if (MCSettings.allMixtapes.Value) { allTracks.Add(chapterMusic2); }
-			if (MCSettings.allMixtapes.Value || Core.Instance.BaseModule.CurrentStage == Stage.hideout) { allTracks.Add(musicTrackByID); }
-            
             MusicTrack chapterMusic3 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.GetCurrentObjectiveInfo().chapter);
             if (!allTracks.Contains(chapterMusic3)) { allTracks.Add(chapterMusic3); }
-
-			AUnlockable[] unlockables = player.phone.GetAppInstance<AppMusicPlayer>().Unlockables;
-			for (int i = 0; i < unlockables.Length; i++)
-			{
-				MusicTrack musicTrack = unlockables[i] as MusicTrack;
-                if (Core.Instance.Platform.User.GetUnlockableSaveDataFor(musicTrack).IsUnlocked) {
-                    musicTrack.isRepeatable = false;
-                    if (!allTracks.Contains(musicTrack)) { allTracks.Add(musicTrack); }
-                }
-			}
-
-            foreach (MusicTrack additionalTrack in GetAllMusic()) {
-                if (!allTracks.Contains(additionalTrack)) { allTracks.Add(additionalTrack); }
-            }
-
-            if (hasBRR) { 
-                foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
-                    if (!allTracks.Contains(customTrack)) { allTracks.Add(customTrack); }
-                }
-            }
 
             return allTracks;
         }
@@ -497,9 +478,19 @@ namespace MusicCurator
         /* all music tracks in the game */
         public static List<MusicTrack> GetAllMusicIncludingLocked(bool getInvalid = false) {
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
-			
+
+            if (allMusicCache.Count > 0) { 
+                foreach (TrackInfo info in allMusicCache) {
+                    if (getInvalid || info.Valid) { allTracks.Add(info.MusicTrack); }
+                }
+                return allTracks; 
+            }
+
+            List<TrackInfo> allTracksInfo = new List<TrackInfo>(); 
+            		
             MusicTrack musicTrackByID = Core.Instance.AudioManager.MusicLibraryPlayer.GetMusicTrackByID(MusicTrackID.Hideout_Mixtape);
 			allTracks.Add(musicTrackByID);
+            allTracksInfo.Add(new TrackInfo { MusicTrack = musicTrackByID, OnlyIfAllMixtapes = true });
 
 			AUnlockable[] unlockables = player.phone.GetAppInstance<AppMusicPlayer>().Unlockables;
 			for (int i = 0; i < unlockables.Length; i++)
@@ -507,18 +498,26 @@ namespace MusicCurator
 				MusicTrack musicTrack = unlockables[i] as MusicTrack;
                 musicTrack.isRepeatable = false;
                 allTracks.Add(musicTrack);
+                allTracksInfo.Add(new TrackInfo { MusicTrack = musicTrack });
 			}
 
             MusicTrack chapterMusic2 = Core.Instance.baseModule.StageManager.chapterMusic.GetChapterMusic(Story.Chapter.CHAPTER_6);
             allTracks.Add(chapterMusic2);
+            allTracksInfo.Add(new TrackInfo { MusicTrack = chapterMusic2, OnlyIfAllMixtapes = true });
 
             foreach (MusicTrack additionalTrack in GetAllMusic()) {
-                if (!allTracks.Contains(additionalTrack)) { allTracks.Add(additionalTrack); }
+                if (!allTracks.Contains(additionalTrack)) { 
+                    allTracks.Add(additionalTrack); 
+                    allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack });
+                }
             }
 
             if (hasBRR) { 
                 foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
-                    if (!allTracks.Contains(customTrack)) { allTracks.Add(customTrack); }
+                    if (!allTracks.Contains(customTrack)) { 
+                        allTracks.Add(customTrack); 
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = customTrack });
+                    }
                 }
             }
 
@@ -529,6 +528,7 @@ namespace MusicCurator
                     if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
                         allTracks.Add(additionalTrack); 
                         allTrackID.Add(TrackToSongID(additionalTrack));
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack, Valid = false });
                     }
                 }
 
@@ -536,6 +536,7 @@ namespace MusicCurator
                     if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
                         allTracks.Add(additionalTrack); 
                         allTrackID.Add(TrackToSongID(additionalTrack));
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack, Valid = false });
                     }
                 }
 
@@ -544,11 +545,13 @@ namespace MusicCurator
                         if (!allTracks.Contains(additionalTrack) && !allTrackID.Contains(TrackToSongID(additionalTrack))) { 
                             allTracks.Add(additionalTrack); 
                             allTrackID.Add(TrackToSongID(additionalTrack));
+                            allTracksInfo.Add(new TrackInfo { MusicTrack = additionalTrack, Valid = false });
                         }
                     }
                 }
             }
 
+            allMusicCache = allTracksInfo; 
             return allTracks;
         }
 
@@ -575,7 +578,7 @@ namespace MusicCurator
 
         public static bool PlayerUsingMusicApp() {
             if (player == null || player.phone == null)  { return false; }
-            return (player.phone.m_CurrentApp is AppMusicPlayer && player.phone.IsOn && player.phoneLayerWeight >= 1f);
+            return player.phone.m_CurrentApp is AppMusicPlayer && player.phone.IsOn && player.phoneLayerWeight >= 1f;
         }
 
         public static string GetPlaylistName(int playlistIndex) {
@@ -810,6 +813,9 @@ namespace MusicCurator
         }
 
         public static bool TrackIsExcluded(MusicTrack checkTrack) {
+            if (excludedTracks == null || checkTrack == null || PlaylistSaveData.excludedTracksCarryOver == null) {
+                return false;
+            }
             return excludedTracks.Contains(checkTrack) || PlaylistSaveData.excludedTracksCarryOver.Contains(TrackToSongID(checkTrack)); 
         }
     }

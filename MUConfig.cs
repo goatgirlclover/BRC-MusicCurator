@@ -39,6 +39,8 @@ namespace MusicCurator
         public static ConfigEntry<bool> unlockEncounterMusic;
         public static ConfigEntry<bool> unlockPhone;
 
+        public static ConfigEntry<bool> enableMusicAppChanges;
+
         public static void BindSettings(ConfigFile Config) {
             customPlaylistNamesUnsplit = Config.Bind(
                 "1. Settings",          // The section under which the option is shown
@@ -56,6 +58,8 @@ namespace MusicCurator
             reshuffleOnLoop = Config.Bind(
                 "1. Settings", "Reshuffle Playlist on Loop", true, "If true, \"Shuffle and play\" re-shuffles a shuffled playlist every time it loops. If false, \"Shuffle and play\" shuffles the playlist once before looping the shuffled queue."
             );
+
+            enableMusicAppChanges = Config.Bind("1. Settings", "Enable Music App Changes", false, "Whether to enable the legacy music app blocklist/queue functionality. Recommended to use the Playlists app to manage queue/blocklists. Does not effect the Loop Single feature.");
 
             playlistTracksNoExclude = Config.Bind("1. Settings", "Playlists Ignore Blocklist", true, "If true, playlists can play blocklisted tracks. If false, blocklisted tracks are always skipped, including those in a playlist.");
             skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist. They must be manually skipped to advance in the playlist.");

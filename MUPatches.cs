@@ -130,7 +130,7 @@ namespace MusicCurator {
 
             // looping event song
             else if (MusicCuratorPlugin.skipping && MusicCuratorPlugin.previousTrack == __instance.GetMusicTrack(__instance.CurrentTrackIndex) &&
-            MCSettings.unlockEncounterMusic.Value) { //__instance.AmountOfTracks == 1 && !MusicCuratorPlugin.ListAInB(MusicCuratorPlugin.GetAllUnlockedMusic(), MusicCuratorPlugin.GetAllMusic())) {
+            MCSettings.unlockEncounterMusic.Value) { 
                 MusicCuratorPlugin.player.phone.GetAppInstance<AppMusicPlayer>().OnAppInit();
                 MusicCuratorPlugin.player.phone.GetAppInstance<AppMusicPlayer>().OnAppEnable();
                 MusicCuratorPlugin.player.phone.GetAppInstance<AppMusicPlayer>().PlaySong(1);
@@ -242,23 +242,29 @@ namespace MusicCurator {
     [HarmonyPatch(typeof(MusicPlayerTrackButton))]
     internal class TrackButtonPatches {
         [HarmonyPostfix]
-        [HarmonyPatch(nameof(MusicPlayerTrackButton.ConstantUpdate))]
-        public static void ConstantUpdatePostfix(MusicPlayerTrackButton __instance) {
-            if (!__instance.IsHidden) { MusicCuratorPlugin.UpdateButtonColor(__instance); } // TODO: find a better spot for this. updating this complicated process is very inefficient 
+        [HarmonyPatch(nameof(MusicPlayerTrackButton.OnSelect))]
+        [HarmonyPatch(nameof(MusicPlayerTrackButton.OnDeselect))]
+        [HarmonyPatch(nameof(MusicPlayerTrackButton.SetMusicApp))]
+        public static void ColorUpdatePostfix(MusicPlayerTrackButton __instance) {
+            if (!__instance.IsHidden) { 
+                MusicCuratorPlugin.UpdateButtonColor(__instance); 
+            }
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(MusicPlayerTrackButton.SetMusicApp))]
         public static void SetupPostfix_CreateLabel(MusicPlayerTrackButton __instance) {
-            TextMeshProUGUI queuePosLabel = __instance.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
-            if (queuePosLabel == null || queuePosLabel == __instance.m_TitleLabel) {
-                // Create queue number label
-                TextMeshProUGUI newLabel = UnityEngine.Object.Instantiate(__instance.m_TitleLabel, __instance.m_TitleLabel.transform);
-                newLabel.margin = new Vector4 (0,0,0,0);
-                newLabel.alignment = TextAlignmentOptions.Center;
-                newLabel.text = "";
-                newLabel.fontSize *= 2f;
-                newLabel.transform.position = __instance.m_Disc.transform.position;
+            if (MCSettings.enableMusicAppChanges.Value) {
+                TextMeshProUGUI queuePosLabel = __instance.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
+                if (queuePosLabel == null || queuePosLabel == __instance.m_TitleLabel) {
+                    // Create queue number label
+                    TextMeshProUGUI newLabel = UnityEngine.Object.Instantiate(__instance.m_TitleLabel, __instance.m_TitleLabel.transform);
+                    newLabel.margin = new Vector4 (0,0,0,0);
+                    newLabel.alignment = TextAlignmentOptions.Center;
+                    newLabel.text = "";
+                    newLabel.fontSize *= 2f;
+                    newLabel.transform.position = __instance.m_Disc.transform.position;
+                }
             }
         }
     }
