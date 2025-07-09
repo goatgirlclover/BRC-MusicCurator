@@ -84,6 +84,8 @@ namespace MusicCurator
             public bool OnlyIfAllMixtapes = false; 
         }
 
+        public static Dictionary<string, MusicTrack> dummyTrackCache = new Dictionary<string, MusicTrack>(); 
+
         private void Awake()
         {
             Instance = this;
@@ -317,6 +319,7 @@ namespace MusicCurator
         }
 
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {
+            if (button == null || button.m_TitleLabel == null || button.m_ArtistLabel == null || button.AssignedContent == null) { return; }
             MusicTrack assignedTrack = button.AssignedContent as MusicTrack;
 
             //bool currentPlaylistExists = false;
@@ -666,12 +669,17 @@ namespace MusicCurator
         }
 
         public static MusicTrack CreateDummyTrack(string songID) {
-            // make an invalid track just to make the rest of the code happy
+            if (dummyTrackCache.ContainsKey(songID)) {
+                return dummyTrackCache[songID];
+            }
+
             MusicTrack dummyTrack = ScriptableObject.CreateInstance<MusicTrack>(); //new MusicTrack();
             string[] splitString = SplitSongID(songID);
             dummyTrack.AudioClip = null;
             dummyTrack.Artist = splitString[0].Trim();
             dummyTrack.Title = splitString[1].Trim();
+
+            dummyTrackCache.Add(songID, dummyTrack);
             return dummyTrack;
         }
 
