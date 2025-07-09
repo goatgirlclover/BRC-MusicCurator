@@ -75,6 +75,7 @@ namespace MusicCurator
         public static GameplayUI gameplayUI;
         public static float timeOnSameTrack = 0f;
         private int trackInstanceId = -1;
+        public static string currentPopupText = "";
 
         private void Awake()
         {
@@ -274,6 +275,9 @@ namespace MusicCurator
         }
 
         public static void UpdateTrackPopup() {
+            if (GameplayUIPatches.trackLabel == null) return;
+            bool isBadText = GameplayUIPatches.trackLabel.text.Trim() == "12 tricks combo" || string.IsNullOrWhiteSpace(GameplayUIPatches.trackLabel.text);
+
             if (CommonAPI.Phone.AppUtility.GetAppFont() != GameplayUIPatches.trackLabel.font) {
                 GameplayUIPatches.trackLabel.font = CommonAPI.Phone.AppUtility.GetAppFont();
 
@@ -288,11 +292,12 @@ namespace MusicCurator
                 GameplayUIPatches.trackLabel.GetComponent<RectTransform>().sizeDelta = new Vector3(500f, 40f);
                 GameplayUIPatches.trackLogo.transform.localPosition = new Vector3(-30f, -20f, 0f);
                 GameplayUIPatches.trackLabel.fontMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.175f);
+
+                if (isBadText) { SetTrackPopupText(currentPopupText); }
             }
 
             timeOnSameTrack += Time.deltaTime; 
-
-            float timeOpacity = player.phone.IsOn ? 0.0f : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
+            float timeOpacity = (player.phone.IsOn || isBadText) ? 0.0f : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
             float speed = 0.2f*(Time.deltaTime*60f);
 
             GameplayUIPatches.trackLabel.faceColor = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
@@ -301,8 +306,9 @@ namespace MusicCurator
         }
 
         public static void SetTrackPopupText(string text) {
-            GameplayUIPatches.trackLabel.SetText(text);
             timeOnSameTrack = 0f;
+            currentPopupText = text;
+            try { GameplayUIPatches.trackLabel.SetText(text); } catch (System.Exception) {} // do nothing
         }
 
         public static void UpdateButtonColor(MusicPlayerTrackButton button) {
