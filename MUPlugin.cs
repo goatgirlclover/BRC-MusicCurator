@@ -598,7 +598,9 @@ namespace MusicCurator
         }
 
         public static bool IsInvalidTrack(MusicTrack checkTrack) {
-            return ((checkTrack.Title == string.Empty && checkTrack.Artist == string.Empty) || checkTrack.AudioClip == null);
+            try {
+                return ((checkTrack.Title == string.Empty && checkTrack.Artist == string.Empty) || checkTrack.AudioClip == null);
+            } catch (System.Exception) { return true; }
         }
 
         public static bool pressedAnyButtonIn(List<KeyCode> keybinds) {
@@ -625,45 +627,47 @@ namespace MusicCurator
         }
 
         public static MusicTrack LooseFindTrackBySongID(string songID) { // intended for playlist repair
-            List<MusicTrack> foundTracksMatchID = new List<MusicTrack>();
-            string[] splitString = SplitSongID(songID);
-            //string songIDArtist = splitString[0].Trim();
-            string songIDTitle = splitString[1].Trim();
+            try {
+                List<MusicTrack> foundTracksMatchID = new List<MusicTrack>();
+                string[] splitString = SplitSongID(songID);
+                //string songIDArtist = splitString[0].Trim();
+                string songIDTitle = splitString[1].Trim();
 
-            int closestCharDifference = 999;
+                int closestCharDifference = 999;
 
-            foreach (MusicTrack trackAtI in GetAllMusic()) {
-                string trackAtID = MusicCuratorPlugin.TrackToSongID(trackAtI);
-                if (trackAtID.Contains(ConformSongID(songID))) {
-                    foundTracksMatchID.Add(trackAtI);
-                    int charDifference = Mathf.Abs(trackAtID.Length - songID.Length); 
-                    if (charDifference < closestCharDifference) { closestCharDifference = charDifference; }
+                foreach (MusicTrack trackAtI in GetAllMusic()) {
+                    string trackAtID = MusicCuratorPlugin.TrackToSongID(trackAtI);
+                    if (trackAtID.Contains(ConformSongID(songID))) {
+                        foundTracksMatchID.Add(trackAtI);
+                        int charDifference = Mathf.Abs(trackAtID.Length - songID.Length); 
+                        if (charDifference < closestCharDifference) { closestCharDifference = charDifference; }
+                    }
                 }
-            }
 
-            foreach (MusicTrack foundTrack in foundTracksMatchID) {
-                if (Mathf.Abs(MusicCuratorPlugin.TrackToSongID(foundTrack).Length - songID.Length) == closestCharDifference) {
-                    return foundTrack;
+                foreach (MusicTrack foundTrack in foundTracksMatchID) {
+                    if (Mathf.Abs(MusicCuratorPlugin.TrackToSongID(foundTrack).Length - songID.Length) == closestCharDifference) {
+                        return foundTrack;
+                    }
                 }
-            }
 
-            // last resort - match by only title
-            foundTracksMatchID.Clear();
-            closestCharDifference = 999;
-            foreach (MusicTrack trackAtI in GetAllMusic()) {
-                string trackAtID = MusicCuratorPlugin.TrackToSongID(trackAtI);
-                if (trackAtID.Contains(songIDTitle)) { 
-                    foundTracksMatchID.Add(trackAtI);
-                    int charDifference = Mathf.Abs(trackAtI.Title.Length - songIDTitle.Length); 
-                    if (charDifference < closestCharDifference) { closestCharDifference = charDifference; }
+                // last resort - match by only title
+                foundTracksMatchID.Clear();
+                closestCharDifference = 999;
+                foreach (MusicTrack trackAtI in GetAllMusic()) {
+                    string trackAtID = MusicCuratorPlugin.TrackToSongID(trackAtI);
+                    if (trackAtID.Contains(songIDTitle)) { 
+                        foundTracksMatchID.Add(trackAtI);
+                        int charDifference = Mathf.Abs(trackAtI.Title.Length - songIDTitle.Length); 
+                        if (charDifference < closestCharDifference) { closestCharDifference = charDifference; }
+                    }
                 }
-            }
 
-            foreach (MusicTrack foundTrack in foundTracksMatchID) {
-                if (Mathf.Abs(foundTrack.Title.Length - songIDTitle.Length) == closestCharDifference) {
-                    return foundTrack;
+                foreach (MusicTrack foundTrack in foundTracksMatchID) {
+                    if (Mathf.Abs(foundTrack.Title.Length - songIDTitle.Length) == closestCharDifference) {
+                        return foundTrack;
+                    }
                 }
-            }
+            } catch (System.Exception) {} // do nothing
 
             return CreateDummyTrack(songID);
         }
