@@ -164,7 +164,7 @@ namespace MusicCurator
             if (Core.Instance == null || musicPlayer == null) { return; }
 
             if (musicPlayer.IsPlaying) {
-                if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {
+                if (MusicCuratorPlugin.AllUnlockedTracksExcluded() && GetAllMusic().Count > 1) {
                     if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
                         musicPlayer.ForcePaused();
                     }
