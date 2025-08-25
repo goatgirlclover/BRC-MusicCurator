@@ -34,24 +34,27 @@ namespace MusicCurator {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Reptile.GameplayUI.Init))]
         public static void SetupMusicLabel(GameplayUI __instance) { 
-            MusicCuratorPlugin.gameplayUI = __instance;
-            trackLabel = UnityEngine.Object.Instantiate(__instance.tricksInComboLabel, __instance.tricksInComboLabel.transform.parent);
-            trackLabel.transform.localPosition = __instance.tricksInComboLabel.transform.localPosition;
-            trackLabel.transform.localPosition -= new Vector3(0, 20.0f*((float)Screen.height/1600.0f), 0f);
-            trackLabel.alignment = TextAlignmentOptions.Left;
+            if (MCSettings.enableTrackDisplay.Value && trackLogoImage == null) {
+                MusicCuratorPlugin.gameplayUI = __instance;
+                trackLabel = UnityEngine.Object.Instantiate(__instance.tricksInComboLabel, __instance.tricksInComboLabel.transform.parent);
+                trackLabel.transform.localPosition = __instance.tricksInComboLabel.transform.localPosition;
+                trackLabel.transform.localPosition -= new Vector3(0, 20.0f*((float)Screen.height/1600.0f), 0f);
+                trackLabel.alignment = TextAlignmentOptions.Left;
 
-            GameObject imgObject = new GameObject("Track Icon");
-            RectTransform trans = imgObject.AddComponent<RectTransform>();
-            trans.transform.SetParent(trackLabel.transform); // setting parent
-            trans.localScale = Vector3.one;
-            trans.anchoredPosition = new Vector2(0f, 0f); // setting position, will be on center
-            trans.sizeDelta = new Vector2(32f, 32f); // custom size
-            trackLogo = trans;
+                GameObject imgObject = new GameObject("Track Icon");
+                RectTransform trans = imgObject.AddComponent<RectTransform>();
+                trans.transform.SetParent(trackLabel.transform); // setting parent
+                trans.localScale = Vector3.one;
+                trans.anchoredPosition = new Vector2(0f, 0f); // setting position, will be on center
+                trans.sizeDelta = new Vector2(32f, 32f); // custom size
+                trackLogo = trans;
 
-            Image image = imgObject.AddComponent<Image>();
-            image.sprite = CommonAPI.TextureUtility.LoadSprite(Path.Combine(MusicCuratorPlugin.Instance.Directory, "MC-Note.png"));
-            imgObject.transform.SetParent(trackLabel.transform);
-            trackLogoImage = image;
+                Image image = imgObject.AddComponent<Image>();
+                image.sprite = CommonAPI.TextureUtility.LoadSprite(Path.Combine(MusicCuratorPlugin.Instance.Directory, "MC-Note.png"));
+                imgObject.transform.SetParent(trackLabel.transform);
+                trackLogoImage = image;
+            }
+            
         }
     }
 
@@ -255,7 +258,7 @@ namespace MusicCurator {
         [HarmonyPostfix]
         [HarmonyPatch(nameof(MusicPlayerTrackButton.SetMusicApp))]
         public static void SetupPostfix_CreateLabel(MusicPlayerTrackButton __instance) {
-            if (MCSettings.enableMusicAppChanges.Value) {
+            if (MCSettings.enableQueueVisual.Value) {
                 TextMeshProUGUI queuePosLabel = __instance.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
                 if (queuePosLabel == null || queuePosLabel == __instance.m_TitleLabel) {
                     // Create queue number label

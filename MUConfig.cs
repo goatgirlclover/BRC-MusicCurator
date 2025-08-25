@@ -39,7 +39,9 @@ namespace MusicCurator
         public static ConfigEntry<bool> unlockEncounterMusic;
         public static ConfigEntry<bool> unlockPhone;
 
-        public static ConfigEntry<bool> enableMusicAppChanges;
+        public static ConfigEntry<bool> enableBlockQueueFromMusicApp;
+        public static ConfigEntry<bool> enableQueueVisual;
+        public static ConfigEntry<bool> enableTrackDisplay; 
 
         public static void BindSettings(ConfigFile Config) {
             customPlaylistNamesUnsplit = Config.Bind(
@@ -51,15 +53,23 @@ namespace MusicCurator
             instantShuffle = Config.Bind(
                 "1. Settings", "Instant Shuffle", true, "Instantly set the music app to shuffle all tracks on startup."
             );
+
+            enableTrackDisplay = Config.Bind(
+                "1. Settings", "Display New Track Popup", true, "Whether to show each new track's title and artist in the bottom-left corner of the screen. Supports BombRushRadio and NetRadio."
+            );
+
             alwaysSkipMixtapes = Config.Bind(
                 "1. Settings", "Skip Mixtapes By Default", true, "Automatically blocklist all mixtapes when starting a new save or resetting the blocklist."
             );
+
             allMixtapes = Config.Bind("1. Settings", "Always Load All Mixtapes", true, "Whether or not to add the Hideout mixtape in stages outside of the Hideout (or the Chapter 6 mixtape in the Hideout). Ensures playlists can include and play either track on all stages.");
+            
             reshuffleOnLoop = Config.Bind(
                 "1. Settings", "Reshuffle Playlist on Loop", true, "If true, \"Shuffle and play\" re-shuffles a shuffled playlist every time it loops. If false, \"Shuffle and play\" shuffles the playlist once before looping the shuffled queue."
             );
 
-            enableMusicAppChanges = Config.Bind("1. Settings", "Enable Music App Changes", false, "Whether to enable the legacy music app blocklist/queue functionality. Recommended to use the Playlists app to manage queue/blocklists. Does not effect the Loop Single feature.");
+            enableBlockQueueFromMusicApp = Config.Bind("1. Settings", "Enable Hotkeys in Music App", true, "Whether to enable the legacy music app blocklist/queue functionality. Past the v1 update, it is usually recommended to use the Playlists app to manage queue/blocklists instead. Does not effect the Loop Single feature.");
+            enableQueueVisual = Config.Bind("1. Settings", "Enable Queue Visualization", false, "Whether to enable track queue numbers within the music app. Can impact performance.");
 
             playlistTracksNoExclude = Config.Bind("1. Settings", "Playlists Ignore Blocklist", true, "If true, playlists can play blocklisted tracks. If false, blocklisted tracks are always skipped, including those in a playlist.");
             skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist. They must be manually skipped to advance in the playlist.");
@@ -74,6 +84,7 @@ namespace MusicCurator
                 "Skip Keybinds",     // The key of the configuration option in the configuration file
                 "Semicolon, JoystickButton9",    // The default value
                 "List of KeyCodes that can be pressed to skip/blocklist tracks, separated by commas."); // Description of the option 
+            
             keybindsQueueUnsplit = Config.Bind(
                 "2. Keybinds",          // The section under which the option is shown
                 "Queue Keybinds",     // The key of the configuration option in the configuration file
@@ -88,6 +99,8 @@ namespace MusicCurator
             keybindsQueueUnsplit.SettingChanged += UpdateSettingsEvent;
             keybindsShuffleUnsplit.SettingChanged += UpdateSettingsEvent;
             keybindsPauseUnsplit.SettingChanged += UpdateSettingsEvent;
+
+            enableTrackDisplay.SettingChanged += (s,a) => { GameplayUIPatches.SetupMusicLabel(MusicCuratorPlugin.gameplayUI); };
         }
 
         public static void UpdateSettingsEvent(object sender, EventArgs args) {

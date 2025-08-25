@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.0.0")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.1.0")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -76,12 +76,14 @@ namespace MusicCurator
         public static float timeOnSameTrack = 0f;
         private int trackInstanceId = -1;
         public static string currentPopupText = "";
+        public static readonly Color transparentColor = new Color(1f, 1f, 1f, 0);
 
         public static List<TrackInfo> allMusicCache = new List<TrackInfo>();
         public class TrackInfo {
             public MusicTrack MusicTrack;
             public bool Valid = true;
             public bool OnlyIfAllMixtapes = false; 
+            public bool BRR = false;
         }
 
         public static Dictionary<string, MusicTrack> dummyTrackCache = new Dictionary<string, MusicTrack>(); 
@@ -234,7 +236,7 @@ namespace MusicCurator
                 SetAppShuffle(!musicPlayer.shuffle);
             }
 
-            if (MCSettings.enableMusicAppChanges.Value && PlayerUsingMusicApp()) {
+            if (MCSettings.enableBlockQueueFromMusicApp.Value && PlayerUsingMusicApp()) {
                 MusicPlayerTrackButton mptb = (player.phone.AppInstances["AppMusicPlayer"] as AppMusicPlayer).m_TrackList.SelectedButtton as MusicPlayerTrackButton;
                 MusicTrack selectedTrack = mptb.AssignedContent as MusicTrack;
 
@@ -286,6 +288,7 @@ namespace MusicCurator
             bool isBadText = GameplayUIPatches.trackLabel.text.Trim() == "12 tricks combo" || string.IsNullOrWhiteSpace(GameplayUIPatches.trackLabel.text);
 
             if (CommonAPI.Phone.AppUtility.GetAppFont() != GameplayUIPatches.trackLabel.font) {
+                // finalize setup
                 GameplayUIPatches.trackLabel.font = CommonAPI.Phone.AppUtility.GetAppFont();
 
                 var _outlineMaterial = GameplayUIPatches.trackLabel.fontMaterial;
@@ -304,12 +307,20 @@ namespace MusicCurator
             }
 
             timeOnSameTrack += Time.deltaTime; 
-            float timeOpacity = (player.phone.IsOn || isBadText) ? 0.0f : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
-            float speed = 0.2f*(Time.deltaTime*60f);
+            float timeOpacity = (player.phone.IsOn || isBadText || !MCSettings.enableTrackDisplay.Value) ? 0.0f 
+                                : (timeOnSameTrack < 4f ? 1.0f : 0.0f); 
+            
 
-            GameplayUIPatches.trackLabel.faceColor = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
-            GameplayUIPatches.trackLabel.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0f, 0f, 0f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed)));
-            GameplayUIPatches.trackLogoImage.color = new Color(1f, 1f, 1f, Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed));
+            if (GameplayUIPatches.trackLabel.faceColor == transparentColor && timeOpacity == 0.0f) { return; }
+            else if (GameplayUIPatches.trackLabel.faceColor == Color.white && timeOpacity == 1.0f) { return; }
+
+            float speed = 0.2f*(Time.deltaTime*60f);
+            float value = Mathf.Lerp(GameplayUIPatches.trackLogoImage.color.a, timeOpacity, speed);
+            if (value < 0.01) { value = 0; } else if (value > 0.99) { value = 1; }
+
+            GameplayUIPatches.trackLabel.faceColor = new Color(1f, 1f, 1f, value);
+            GameplayUIPatches.trackLogoImage.color = new Color(1f, 1f, 1f, value);
+            GameplayUIPatches.trackLabel.fontMaterial.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0f, 0f, 0f, value));
         }
 
         public static void SetTrackPopupText(string text) {
@@ -329,7 +340,7 @@ namespace MusicCurator
             //    }
             //}
 
-            if (MCSettings.enableMusicAppChanges.Value) {
+            if (MCSettings.enableQueueVisual.Value) {
                 TextMeshProUGUI queuePosLabel = button.m_TitleLabel.GetComponentsInChildren<TextMeshProUGUI>().LastOrDefault();
                 if (queuePosLabel != null && queuePosLabel != button.m_TitleLabel) {
                     if (queuePosLabel.text == "") { // initial setup - can't add an outline on label creation or game hard crashes
@@ -467,7 +478,8 @@ namespace MusicCurator
             if (allMusicCache.Count < 1) { _=GetAllMusicIncludingLocked(); }
 
             foreach (TrackInfo info in allMusicCache) {
-                if (info.Valid && Core.Instance.Platform.User.GetUnlockableSaveDataFor(info.MusicTrack).IsUnlocked) { 
+                bool unlocked = info.BRR || Core.Instance.Platform.User.GetUnlockableSaveDataFor(info.MusicTrack).IsUnlocked;
+                if (info.Valid && unlocked) { 
                     if (!info.OnlyIfAllMixtapes || MCSettings.allMixtapes.Value) { allTracks.Add(info.MusicTrack); }
                 }
             }
@@ -480,6 +492,7 @@ namespace MusicCurator
         
         /* all music tracks in the game */
         public static List<MusicTrack> GetAllMusicIncludingLocked(bool getInvalid = false) {
+            if (player == null) { return GetAllMusic(); }
             List<MusicTrack> allTracks = new List<MusicTrack>(); 
 
             if (allMusicCache.Count > 0) { 
@@ -519,7 +532,7 @@ namespace MusicCurator
                 foreach (MusicTrack customTrack in BRRHelper.BRRAudios) {
                     if (!allTracks.Contains(customTrack)) { 
                         allTracks.Add(customTrack); 
-                        allTracksInfo.Add(new TrackInfo { MusicTrack = customTrack });
+                        allTracksInfo.Add(new TrackInfo { MusicTrack = customTrack, BRR = true });
                     }
                 }
             }
@@ -811,14 +824,14 @@ namespace MusicCurator
         }
 
         public static bool AllUnlockedTracksExcluded() {
-            if (!GetAllUnlockedMusic().Any()) { return true; }
+            if (!GetAllUnlockedMusic().Any()) { return false; }
             else if (!excludedTracks.Any()) { return false; }
             foreach (MusicTrack music in GetAllUnlockedMusic()) { if (!TrackIsExcluded(music)) { return false; } }
             return true;
         }
 
         public static bool AllAvailableTracksExcluded() {
-            if (!GetAllMusic().Any()) { return true; }
+            if (!GetAllMusic().Any()) { return false; }
             else if (!excludedTracks.Any()) { return false; }
             foreach (MusicTrack music in GetAllMusic()) { if (!TrackIsExcluded(music)) { return false; } }
             return true;
