@@ -16,7 +16,7 @@ using CommonAPI;
 
 namespace MusicCurator
 {
-    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.1.0")]
+    [BepInPlugin("goatgirl.MusicCurator", "MusicCurator", "1.1.1")]
     [BepInProcess("Bomb Rush Cyberfunk.exe")]
     [BepInDependency("CommonAPI", BepInDependency.DependencyFlags.HardDependency)]
     [BepInDependency("kade.bombrushradio", BepInDependency.DependencyFlags.SoftDependency)]
@@ -166,9 +166,11 @@ namespace MusicCurator
             if (Core.Instance == null || musicPlayer == null) { return; }
 
             if (musicPlayer.IsPlaying) {
-                if (MusicCuratorPlugin.AllUnlockedTracksExcluded() && GetAllMusic().Count > 1) {
+                if (MCSettings.allowDisablePlayback.Value && MusicCuratorPlugin.AllUnlockedTracksExcluded() && GetAllMusic().Count > 1) {
                     if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
-                        musicPlayer.ForcePaused();
+                        if (MusicCuratorPlugin.TrackIsExcluded(musicPlayer.GetMusicTrack(musicPlayer.CurrentTrackIndex))) { 
+                            musicPlayer.ForcePaused(); 
+                        }
                     }
                 }
 
@@ -201,7 +203,7 @@ namespace MusicCurator
                 } }
                 
             } else if (!MCSettings.unlockEncounterMusic.Value && !MCSettings.strictBlocklist.Value) {
-                if (musicPlayer.IsPlaying) {
+                if (musicPlayer.IsPlaying && MCSettings.allowDisablePlayback.Value) {
                     if (MusicCuratorPlugin.AllAvailableTracksExcluded()) {
                         if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
                             musicPlayer.ForcePaused();

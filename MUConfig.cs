@@ -43,6 +43,8 @@ namespace MusicCurator
         public static ConfigEntry<bool> enableQueueVisual;
         public static ConfigEntry<bool> enableTrackDisplay; 
 
+        public static ConfigEntry<bool> allowDisablePlayback;
+
         public static void BindSettings(ConfigFile Config) {
             customPlaylistNamesUnsplit = Config.Bind(
                 "1. Settings",          // The section under which the option is shown
@@ -75,10 +77,12 @@ namespace MusicCurator
             skipRepeatInPlaylists = Config.Bind("1. Settings", "Playlists Ignore Repeatable Tracks", true, "If true, repeatable tracks (the stage mixtapes) don't loop if they're played within a playlist. If false, repeatable tracks will loop forever, even in a playlist. They must be manually skipped to advance in the playlist.");
             alwaysInstantShuffle = Config.Bind("1. Settings", "Always Instant Shuffle", false, "If true, the music player will instantly shuffle every time the player enters a new area, rather than just on startup. Not recommended if playing with MusicCurator's patched BombRushRadio.");
 
-            unlockEncounterMusic = Config.Bind("1. Settings", "Allow Skipping Encounter Music", true, "Allows the skip keybind to pevent forced story tracks (ex. crew battles, dream sequences) from looping forever, unlocking all unlocked tracks to play.");
+            unlockEncounterMusic = Config.Bind("1. Settings", "Allow Skipping Encounter Music", true, "Allows the skip keybind to prevent forced story tracks (ex. crew battles, dream sequences) from looping forever, unlocking all unlocked tracks to play.");
             strictBlocklist = Config.Bind("1. Settings", "Strict Blocklisting Mode", false, "By default, blocklisted songs can play in cutscenes and story events, as well as when manually played. This setting attempts to prevent blocklisted songs from ever playing in any situation. For best results, set \"Playlists Ignore Blocklist\" to false as well.");
             unlockPhone = Config.Bind("1. Settings", "Always Unlock Phone", false, "Experimental! Allows you to use your phone during story events. Intended only for changing the music during these sequences - using other apps may cause progression issues.");
             
+            allowDisablePlayback = Config.Bind("1. Settings", "Allow Disabling Playback", true, "Allow forcefully pausing the music player if the plugin thinks it is playing a blocklisted track. Disable if this detection is as faulty as it usually seems to be."); 
+
             keybindsSkipUnsplit = Config.Bind(
                 "2. Keybinds",          // The section under which the option is shown
                 "Skip Keybinds",     // The key of the configuration option in the configuration file
@@ -101,6 +105,7 @@ namespace MusicCurator
             keybindsPauseUnsplit.SettingChanged += UpdateSettingsEvent;
 
             enableTrackDisplay.SettingChanged += (s,a) => { GameplayUIPatches.SetupMusicLabel(MusicCuratorPlugin.gameplayUI); };
+
         }
 
         public static void UpdateSettingsEvent(object sender, EventArgs args) {

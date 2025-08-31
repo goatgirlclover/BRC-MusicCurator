@@ -70,14 +70,15 @@ namespace MusicCurator {
         [HarmonyPatch(nameof(MusicPlayer.PlayNext))]
         public static void PlayNextPostfix_OverrideNextTrack(MusicPlayer __instance) {
             // all tracks excluded 
-            if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {
+            /*if (MusicCuratorPlugin.AllUnlockedTracksExcluded()) {
                 if (!(MusicCuratorPlugin.playlistTracks.Any() && MCSettings.playlistTracksNoExclude.Value)) {
                     __instance.ForcePaused();
                 }
             }
 
             // looping single track
-            else if (MusicCuratorPlugin.loopingSingleTrackIndex >= 0) {
+            else */
+            if (MusicCuratorPlugin.loopingSingleTrackIndex >= 0) {
                 MusicTrack nextTrack = __instance.GetMusicTrack(MusicCuratorPlugin.loopingSingleTrackIndex);
                 if (!MusicCuratorPlugin.IsInvalidTrack(nextTrack)) { MusicCuratorPlugin.PlayTrack(nextTrack); }
                 else { // stop looping single track
@@ -239,9 +240,13 @@ namespace MusicCurator {
             
             if (!solved) { nextInQueue = __instance.indexQueue.GetNextInQueue(__instance.currentTrackIndex, 1); }
             int previousInQueue = __instance.indexQueue.GetPreviousInQueue(__instance.currentTrackIndex, (int)__instance.nPreviousTracksBuffered);
-            __instance.EvaluateNextTrack(nextInQueue);
-            __instance.EvaluateTrackToUnload(previousInQueue);
-            return false;
+            
+            try { 
+                if (__instance.currentMusicTracks.ElementAtOrDefault(nextInQueue)) { __instance.EvaluateNextTrack(nextInQueue); }
+                else { return true; }
+                __instance.EvaluateTrackToUnload(previousInQueue);
+                return false; 
+            } catch (System.Exception) { return true; }
         }
     }
 
