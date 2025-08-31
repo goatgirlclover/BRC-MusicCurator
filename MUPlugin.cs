@@ -703,6 +703,8 @@ namespace MusicCurator
         }
 
         public static string TrackToSongID(MusicTrack startingTrack) {
+            if (startingTrack.Artist.IsNullOrWhiteSpace()) { Log.LogError("Track " + startingTrack.Title + "has no set artist! It will not be detected properly in MusicCurator! Make sure your filenames or MD3 tags are formatted properly for BombRushRadio."); }
+            if (startingTrack.Title.IsNullOrWhiteSpace()) { Log.LogError("Unknown track has no title??? What the fuck??? Make sure your filenames or MD3 tags are formatted properly for BombRushRadio"); }
             return ConformSongID(startingTrack.Artist + songIDSymbol + startingTrack.Title);
         }
 
